@@ -1,12 +1,14 @@
 """
 
 """
-import sys
+import sys,os
+sys.path.append(os.path.abspath(os.path.join('..', 'BCI')))
 from  PyQt5.QtWidgets import QApplication
 from PyQt5.QtWidgets import QWidget # it's a base class of all user insterface objects in PyQt 
 from PyQt5.uic import loadUiType 
 from os import path
 import sys
+from Controller.DataCollecting import Collect
 
 OUR_UI= loadUiType(path.join(path.dirname(__file__),'MainLayout.ui'))[0]
 # return tuple of child and base class  
@@ -15,6 +17,7 @@ class OurAPP(QWidget,OUR_UI):
     def __init__(self,parent=None):
         super(OurAPP,self).__init__(parent)
         QWidget.__init__(self)
+        self.dc = Collect()
         self.setupUi(self)
         self.TrainButton_Handling()
         self.back_handling()
@@ -40,5 +43,6 @@ def main():
     sys.exit(app.exec_()) # terminate system when window is terminated 
 
 if __name__ == '__main__':
+    # print(sys.path)
     main()
     # print(OUR_UI)
