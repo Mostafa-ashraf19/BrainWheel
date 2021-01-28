@@ -9,6 +9,7 @@ from PyQt5.uic import loadUiType
 from os import path
 import sys
 from Controller.DataCollecting import Collect
+from exp_senario2 import expScenario
 
 OUR_UI= loadUiType(path.join(path.dirname(__file__),'MainLayout.ui'))[0]
 # return tuple of child and base class  
@@ -19,12 +20,14 @@ class OurAPP(QWidget,OUR_UI):
         QWidget.__init__(self)
         self.dc = Collect()
         self.setupUi(self)
-        self.TrainButton_Handling()
+        self.RecordButton_Handling()
         self.back_handling()
         self.initiators()
+        self.sc1= expScenario()
+        self.stacklayout.insertWidget(1,self.sc1)
 
-    def TrainButton_Handling(self):
-        self.TrainButton.clicked.connect(lambda : self.stacklayout.setCurrentIndex(1))
+    def RecordButton_Handling(self):
+        self.RecordButton.clicked.connect(lambda : self.stacklayout.setCurrentIndex(1))
 
     def back_handling(self):
         self.BackButton.clicked.connect(lambda : self.stacklayout.setCurrentIndex(0))    
