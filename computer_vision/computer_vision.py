@@ -13,8 +13,8 @@ import pyzed.sl as sl
 
 from errors import *
 
-from od_model.predict import ODModel
-from ss_model.predict import SSModel
+# from od_model.predict import ODModel
+# from ss_model.predict import SSModel
 
 # Constants
 
@@ -36,19 +36,19 @@ class ComputerVision:
 		# zed camera
 		self.zed = sl.Camera()
 
-		init_parameters = sl.InitParameters()
+		init_params = sl.InitParameters()
 		init_params.camera_resolution = IMG_RESOLUTION
 		init_params.camera_fps = CAM_FPS
 		init_params.coordinate_units = sl.UNIT.CENTIMETER
 		init_params.depth_mode = sl.DEPTH_MODE.PERFORMANCE
 
-		self.zed.open(init_params)
-		if not self.zed.isOpened():
+		err = self.zed.open(init_params)
+		if err != sl.ERROR_CODE.SUCCESS:
 			raise CameraNotConnectedError
 
 		# machine learning models
-		self.od_model = ODModel()
-		self.ss_model = SSModel()
+		# self.od_model = ODModel()
+		# self.ss_model = SSModel()
 
 	def __del__(self):
 		self.zed.close()
@@ -118,6 +118,7 @@ class ComputerVision:
 			self.zed.retrieve_image(depth_map_img, sl.VIEW.DEPTH)
 
 		depth_map = depth_map.get_data()
+		depth_map_img = depth_map_img.get_data()
 
 		if show:
 			cv.imshow('Depth Map', depth_map_img)
@@ -349,6 +350,8 @@ if __name__ == '__main__':
 		double_img = np.hstack((l_img, r_img))
 		cv.imshow('Camera Inputs', double_img)
 		cv.imshow('Depth Map', depth_map_img)
+		print(point_cloud)
+		cv.waitKey(0)
 
 		# # Object Detection
 		# od_bbox = CV.object_detection(l_img, show=True, keep_showing=True)
