@@ -43,7 +43,7 @@ class ComputerVision:
 		init_params.depth_mode = sl.DEPTH_MODE.PERFORMANCE
 
 		self.zed.open(init_params)
-		if err != sl.ERROR_CODE.SUCCESSnot self.zed.isOpened():
+		if err != sl.ERROR_CODE.SUCCESSnot:
 			raise CameraNotConnectedError
 
 		# machine learning models
