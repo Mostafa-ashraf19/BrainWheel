@@ -27,6 +27,13 @@ The Computer Vision part of the project has many functions including
 
 ## Usage
 
+First you have to download the pytorch model files:
+ - Object Detection files should be put directly in the od_model folder ([Source Repo](https://github.com/ultralytics/yolov3))
+   - [yolov3.pt](https://github.com/ultralytics/yolov3/releases/download/v9.1/yolov3.pt)
+   - [yolov3-tiny.pt](https://github.com/ultralytics/yolov3/releases/download/v9.1/yolov3-tiny.pt)
+ - Object Detection files should be put directly in the ss_model folder ([Source Repo]())
+  - ...
+
 To use the Computer Vision module you simply import it as follows:
 
 ```python
