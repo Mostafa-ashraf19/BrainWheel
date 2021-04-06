@@ -12,21 +12,17 @@ import cv2 as cv
 import pyzed.sl as sl
 
 from errors import *
+from od_model.utils.plots import plot_one_box
+from od_model.predict import CLASS_COLORS, USEFUL_CLASSES, LINE_THICKNESS
 
 from od_model.predict import ODModel
-from ss_model.predict import SSModel
+from od_model.predict import ODModelTiny as ODModel
+# from ss_model.predict import SSModel
 
 # Constants
 
 IMG_RESOLUTION = sl.RESOLUTION.HD720
 CAM_FPS = 30
-
-OD_USEFUL_CLASSES = [
-	 0,  1,  2,  3,  4,
-	 6,  7,  8, 11, 14,
-	16, 17, 57, 58, 60,
-	61, 62, 63, 72, 73
-]
 
 
 # Main Class
@@ -36,19 +32,19 @@ class ComputerVision:
 		# zed camera
 		self.zed = sl.Camera()
 
-		init_parameters = sl.InitParameters()
+		init_params = sl.InitParameters()
 		init_params.camera_resolution = IMG_RESOLUTION
 		init_params.camera_fps = CAM_FPS
 		init_params.coordinate_units = sl.UNIT.CENTIMETER
 		init_params.depth_mode = sl.DEPTH_MODE.PERFORMANCE
 
-		self.zed.open(init_params)
-		if err != sl.ERROR_CODE.SUCCESSnot:
+		err = self.zed.open(init_params)
+		if err != sl.ERROR_CODE.SUCCESS:
 			raise CameraNotConnectedError
 
 		# machine learning models
 		self.od_model = ODModel()
-		self.ss_model = SSModel()
+		# self.ss_model = SSModel()
 
 	def __del__(self):
 		self.zed.close()
@@ -118,6 +114,7 @@ class ComputerVision:
 			self.zed.retrieve_image(depth_map_img, sl.VIEW.DEPTH)
 
 		depth_map = depth_map.get_data()
+		depth_map_img = depth_map_img.get_data()
 
 		if show:
 			cv.imshow('Depth Map', depth_map_img)
@@ -141,7 +138,6 @@ class ComputerVision:
 		runtime_parameters = sl.RuntimeParameters()
 		if self.zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
 			self.zed.retrieve_measure(point_cloud, sl.MEASURE.XYZRGBA)
-
 		return point_cloud.get_data()
 
 	def object_detection(self, img=None, return_image=False, show=False, keep_showing=False):
@@ -212,6 +208,7 @@ class ComputerVision:
 			occ_grid
 				occupancy grid.
 		"""
+		#TODO: Check that this function works with ZED camera
 		pass
 	
 	def _get_dist(bbox, point_cloud):
@@ -220,6 +217,7 @@ class ComputerVision:
 
 		Helper Function!
 		"""
+		#TODO: Check that this function works with ZED camera
 		x_min, y_min, x_max, y_max = bbox
 
 		x_min, y_min, x_max, y_max = map(int, [x_min, y_min, x_max, y_max])
@@ -247,39 +245,87 @@ class ComputerVision:
 			min_distances
 				the minimum distance for every detected object in the current frame
 		"""
+		#TODO: Check that this function works with ZED camera
 		if point_cloud is None:
 			point_cloud = self.point_cloud()
 		if od_bbox is None:
 			od_bbox = self.object_detection()
 
-		boxes, scores, classes, valid_detections = od_bbox
-		x, y, z = point_cloud
+		boxes = od_bbox[:, :4]
+		scores = od_bbox[:, 4]
+		classes = od_bbox[:, 5]
+		valid_detections = len(od_bbox)
 
 		min_distances = []
-		for i in range(valid_detections[0]):
-			class_id = classes[0][i]
+		for i in range(valid_detections):
+			class_id = classes[i]
 			if class_id in OD_USEFUL_CLASSES:
-				bbox = boxes[0][i]
+				bbox = boxes[i]
 				min_distances.append(self._get_dist(bbox, point_cloud))
 
 		return np.array(min_distances)
+
+	def show_distance_to_collision(self, img, od_bbox, min_dists, show=False, keep_showing=False):
+		"""Shows the minimum distance to all detected objects in an image.
+
+		Parameters:
+			img
+				left image from the camera
+			od_bbox
+				output of the OD model computed on the current frame
+			min_dists
+				output of the distance_to_collision function
+			show
+
+		Returns:
+			img
+				modified image after adding bounding boxes
+		"""
+		d2c_img = img.copy()
+
+		for (*xyxy, conf, class_id), dist in reversed(zip(od_bbox, min_dists)):
+				if class_id in USEFUL_CLASSES:
+					label = '{}: {:.2f} cm'.format(CLASS_NAMES[int(class_id)], dist)
+					plot_one_box(xyxy, d2c_img, label=label, color=CLASS_COLORS[int(class_id)], line_thickness=LINE_THICKNESS)
+		
+		if show:
+			cv.imshow('Distance To Collision', d2c_img)
+			if not keep_showing:
+				cv.waitKey(0)
+				cv.destroyWindow('Distance To Collision')
+
+		return d2c_img
+
 
 	# Add support for l_img, r_img in class_instance:
 	# use 'q' to quit the loop
 	def loop(self, l_img=True, r_img=False, depth_map=False, depth_map_img=False, point_cloud=False):
 		while True:
 			cache = ()
-			_l_img, _r_img = self.capture()
-			if l_img:
-				cache = cache + (_l_img,)
-			if r_img:
-				cache = cache + (_r_img,)
-			if depth_map:
-				cache = cache + (self.depth_map(),)
-			if depth_map_img:
-				cache = cache + (self.depth_map(return_image=True),)
-			if point_cloud:
-				cache = cache + (self.point_cloud(),)
+
+			runtime_parameters = sl.RuntimeParameters()
+			if self.zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
+				if l_img:
+					_l_img = sl.Mat()
+					self.zed.retrieve_image(_l_img, sl.VIEW.LEFT)
+					cache = cache + (_l_img.get_data())
+				if r_img:
+					_r_img = sl.Mat()
+					self.zed.retrieve_image(_r_img, sl.VIEW.RIGHT)
+					cache = cache + (_r_img.get_data())
+				if depth_map:
+					_depth_map = sl.Mat()
+					self.zed.retrieve_measure(_depth_map, sl.MEASURE.DEPTH)
+					cache = cache + (_depth_map.get_data())
+				if depth_map_image:
+					_depth_map_img = sl.Mat()
+					self.zed.retrieve_image(_depth_map_img, sl.VIEW.DEPTH)
+					cache = cache + (_depth_map_img.get_data())
+				if point_cloud:
+					_point_cloud = sl.Mat()
+					self.zed.retrieve_measure(_point_cloud, sl.MEASURE.XYZRGBA)
+					cache = cache + (_point_cloud.get_data())
+
 			yield cache
 			# use 'q' to quit the loop
 			if cv.waitKey(1) & 0xFF == ord('q'):
@@ -345,12 +391,15 @@ if __name__ == '__main__':
 	for cache in CV.loop(l_img=True, r_img=True, depth_map_img=True, point_cloud=True):
 		l_img, r_img, depth_map_img, point_cloud = cache
 
-		double_img = np.hstack((l_img, r_img))
-		cv.imshow('Camera Inputs', double_img)
+		# double_img = np.hstack((l_img, r_img))
+		cv.imshow('Camera Inputs', l_img)
 		cv.imshow('Depth Map', depth_map_img)
+		print("************")
+		print(point_cloud.shape)
 
 		# Object Detection
 		od_bbox = CV.object_detection(l_img, show=True, keep_showing=True)
+		print(od_bbox[:3])
 
 		# # Semantic Segmentation
 		# ss_pred = CV.semantic_segmentation(l_img, show=True, keep_showing=True)
@@ -358,11 +407,12 @@ if __name__ == '__main__':
 		# # Occupancy Grid
 		# occ_grid = CV.occupancy_grid(point_cloud, ss_pred, show=True, keep_showing=True)
 
-		# # Distance to Collision
-		# min_dists = CV.distance_to_collision(od_bbox, point_cloud)
-		# print(min_dists)
+		# Distance to Collision
+		min_dists = CV.distance_to_collision(od_bbox, point_cloud)
+		CV.show_distance_to_collision(self, l_img, od_bbox, min_dists, show=True, keep_showing=True)
 
 		# Press 'q' to stop ...
+		cv.waitKey(0)
 	#'''
 
 	cv.destroyAllWindows()
