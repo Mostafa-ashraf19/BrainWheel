@@ -7,9 +7,12 @@ import torch
 
 import torch.nn as nn
 import torch.nn.functional as F
-
+import numpy as np
 
 from util import io
+from PIL import Image
+from util.pallete import get_mask_pallete
+
 
 from torchvision.transforms import Compose
 from dpt.models import DPTSegmentationModel
@@ -71,7 +74,7 @@ class segmentation_model(models.DPT):
             self.load(path)
 
     
-    def run(self,img_name,output_path, model_path, model_type="dpt_hybrid", optimize=True):
+    def predict(self,img_name, output_path,model_path, model_type="dpt_hybrid", optimize=True):
          device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
          print("device: %s" % device)
 
@@ -136,21 +139,41 @@ class segmentation_model(models.DPT):
             )
             prediction = torch.argmax(prediction, dim=1) + 1
             prediction = prediction.squeeze().cpu().numpy()
+            print( prediction)
 
-            #output hwa by7otha f file mmkn a8yrha tb2a imshow 3adyy
+
+            #mask = get_mask_pallete(prediction, "ade20k")
+            #out_img = Image.fromarray(np.uint8(255*img)).convert("RGBA")
+            #seg = mask.convert("RGBA")
+
+            #output = Image.blend(out_img, seg, 0.5)
+            #cv2.imshow("panse",output)
+            #cv2.waitKey(0)
+            #cv2.destroyWindow('panse')
+
+
+            
+          
+
             filename = os.path.join(
-                output_path, os.path.splitext(os.path.basename("output"))[0]
-            )
+            output_path, os.path.splitext(os.path.basename(img_name))[0]
+        )
             io.write_segm_img(filename, img, prediction, alpha=0.5)
+           
 
-            print("finished")
+          
+
+         
+           
+        
 
 if __name__ == "__main__":
     
     s=segmentation_model(4)
     #s.run("E:\Graduation Project\SS model 1\DPT\input","E:\\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt",model_type="dpt_hybrid", optimize=True)
-    s.run("test.jpeg","E:\\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt",model_type="dpt_hybrid", optimize=True)
-
+    #s.run("test.jpeg","E:\\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt",model_type="dpt_hybrid", optimize=True)
+    s.predict("test.jpeg","E:\\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt",model_type="dpt_hybrid", optimize=True)
+  
 
 
 
