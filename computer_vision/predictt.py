@@ -2,7 +2,7 @@ import os
 import glob
 import cv2
 import argparse
-
+import PIL
 import torch
 
 import torch.nn as nn
@@ -12,6 +12,8 @@ import numpy as np
 from util import io
 from PIL import Image
 from util.pallete import get_mask_pallete
+from util.io import write_depth
+
 
 
 from torchvision.transforms import Compose
@@ -73,13 +75,16 @@ class segmentation_model(models.DPT):
         if path is not None:
             self.load(path)
 
+
+
+
     
-    def predict(self,img_name, output_path,model_path, model_type="dpt_hybrid", optimize=True):
+    def predict(self,img_name,output_path,model_path, model_type="dpt_hybrid", optimize=True):
          device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
          print("device: %s" % device)
 
          net_w = net_h = 480
-
+        # check with piere lw nshel condition w nsbt model w  brdoo cudaa #
         # load network
          if model_type == "dpt_large":
             model = DPTSegmentationModel(
@@ -133,33 +138,34 @@ class segmentation_model(models.DPT):
                 sample = sample.half()
 
             out = model.forward(sample)
-
+            
             prediction = torch.nn.functional.interpolate(
                 out, size=img.shape[:2], mode="bicubic", align_corners=False
             )
             prediction = torch.argmax(prediction, dim=1) + 1
             prediction = prediction.squeeze().cpu().numpy()
             print( prediction)
+            #return(prediction)
 
-
-            #mask = get_mask_pallete(prediction, "ade20k")
-            #out_img = Image.fromarray(np.uint8(255*img)).convert("RGBA")
-            #seg = mask.convert("RGBA")
-
-            #output = Image.blend(out_img, seg, 0.5)
-            #cv2.imshow("panse",output)
-            #cv2.waitKey(0)
-            #cv2.destroyWindow('panse')
 
 
             
-          
-
-            filename = os.path.join(
-            output_path, os.path.splitext(os.path.basename(img_name))[0]
-        )
+            filename = os.path.join(output_path, os.path.splitext(os.path.basename(img_name))[0])
             io.write_segm_img(filename, img, prediction, alpha=0.5)
-           
+            
+    
+    
+  # def show_on_image(self, img_name,output_path,model_path):
+
+            
+        #    filename = os.path.join(output_path, os.path.splitext(os.path.basename(img_name))[0])
+        #    prediction=self.predict(img_name,model_path)
+        #    img= io.read_image(img_name)
+        #    io.write_segm_img(filename, img, prediction, alpha=0.5)
+
+
+            ###change img_name dih l img bsssssssssssssssss####################
+        
 
           
 
@@ -169,16 +175,12 @@ class segmentation_model(models.DPT):
 
 if __name__ == "__main__":
     
-    s=segmentation_model(4)
+    s=segmentation_model(18)
     #s.run("E:\Graduation Project\SS model 1\DPT\input","E:\\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt",model_type="dpt_hybrid", optimize=True)
     #s.run("test.jpeg","E:\\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt",model_type="dpt_hybrid", optimize=True)
-    s.predict("test.jpeg","E:\\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt",model_type="dpt_hybrid", optimize=True)
-  
-
-
-
-
-
+    
+    s.predict("test1.jpeg","E:\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt",model_type="dpt_hybrid", optimize=True)
+ #s.show_on_image("test.jpeg","E:\Graduation Project\SS model 1\DPT\output_semseg","E:\Graduation Project\SS model 1\DPT\weights\dpt_hybrid-ade20k-53898607.pt")
 
         
 
