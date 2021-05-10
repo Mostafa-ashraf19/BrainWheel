@@ -1,4 +1,4 @@
-# Computer Vision for the BCSW
+# Computer Vision Module for BrainWheel
 
 In this part we use numerous computer vision techniques to help
 with the Brain-Controlled Smart Wheelchair (BCSW).
@@ -19,13 +19,22 @@ The Computer Vision part of the project has many functions including
 
  - Using Stereo Camera Vision with an easy to use interface
  - Depth Estimation (DE) using a disparity map algorithm
- - Semantic Segmentation (SS) using [ICNet](https://openaccess.thecvf.com/content_ECCV_2018/papers/Hengshuang_Zhao_ICNet_for_Real-Time_ECCV_2018_paper.pdf)
- - Object Detecttion (OD) using [Yolov3](https://github.com/eriklindernoren/PyTorch-YOLOv3)
+ - Semantic Segmentation (SS) using [ICNet](...)
+ - Object Detecttion (OD) using [Yolov3](https://github.com/Lornatang/YOLOv3-PyTorch)
  - Finding the Occupancy Grid (OG) using the RANSAC algorithm
  - Calculating the Distance to Collision (D2C) for every object detected with OD
 
 
 ## Usage
+
+First you have to download the pytorch model files:
+ - Object Detection files should be put directly in the od_model/weights folder ([Source Repo](https://github.com/Lornatang/YOLOv3-PyTorch))
+   - [yolov3](https://pjreddie.com/media/files/yolov3.weights)
+   - [yolov3-tiny](https://pjreddie.com/media/files/yolov3-tiny.weights)
+   - [yolov3-spp](https://pjreddie.com/media/files/yolov3-spp.weights)
+   - [backbone network](https://pjreddie.com/media/files/darknet53.conv.74)
+ - Semantic Segmentation files should be put directly in the ss_model folder ([Source Repo](...))
+  - ...
 
 To use the Computer Vision module you simply import it as follows:
 
@@ -158,6 +167,8 @@ Every Parameter's Description is shown here:
    
  - [x] Distance to Collision Calculation (D2C):
    - [x] Write ```distance_to_collision()``` method
+   - [x] Write ```is_close_to_collision()``` method
+   - [x] Write ```is_close_to_collision_simple()``` method
    
  - [x] Document all Functions in the ```computer_vision``` module
  
