@@ -84,16 +84,17 @@ class ODModel:
         if self.device.type != "cpu":
             self.model(torch.zeros((1, 3, args.image_size, args.image_size), device=self.device))
 
-    def predict(self, img):
-        input_img_shape = img.shape
-        img = cv2.resize(img, self.image_shape)
-        image = torch.from_numpy(img).to(self.device)
-        image = image.float() / 255.0
+    def predict(self, image):
+        input_img_shape = image.shape
+        image = cv2.resize(image, self.image_shape)
 
-        if image.ndimension() == 3:     # add (m, ...)
-            image = image.unsqueeze(0)
+        if image.ndim == 3:     # add (m, ...)
+            image = np.expand_dims(image, 0)
         if image.shape[1] != 3:         # (m, c, h, w) instad of (m, h, w, c)
             image = np.transpose(image, (0,3,1,2))
+
+        image = torch.from_numpy(image).cpu().to(self.device)
+        image = image.float() / 255.0
 
         pred_bbox = self.model(image)[0]
 
