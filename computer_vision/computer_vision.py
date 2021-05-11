@@ -11,7 +11,7 @@ import numpy as np
 import cv2
 import pyzed.sl as sl
 
-from errors import CameraNotConnectedError
+from errors import CameraNotConnectedError, NoImageError
 
 # from od_model import ODModel
 from od_model import ODModelTiny as ODModel
@@ -185,9 +185,11 @@ class ComputerVision:
 
 		pred_bbox = self.od_model.predict(img)
 
-		if return_image:
+		if show or return_image:
 			pred_img = self.od_model.show_on_image(img, pred_bbox, show, keep_showing)
-			return pred_img
+
+		if return_image:
+			return pred_bbox, pred_img
 		else:
 			return pred_bbox
 
@@ -212,9 +214,11 @@ class ComputerVision:
 
 		pred = self.ss_model.predict(img)
 
-		if return_image:
+		if show or return_image:
 			pred_img = self.ss_model.show_on_image(img, pred_bbox, show, keep_showing)
-			return pred_img
+
+		if return_image:
+			return pred, pred_img
 		else:
 			return pred
 
@@ -235,28 +239,24 @@ class ComputerVision:
 		#TODO: Check that this function works with ZED camera
 		pass
 	
-	def _get_dist(bbox, point_cloud):
+	def _get_dist(self, bbox, point_cloud):
 		"""Returns the distance of the object in the given point cloud from the given
 		bounding box.
 
 		Helper Function!
 		"""
-		#TODO: Check that this function works with ZED camera
-		x_min, y_min, x_max, y_max = bbox
-
-		x_min, y_min, x_max, y_max = map(int, [x_min, y_min, x_max, y_max])
+		x_min, y_min, x_max, y_max = map(int, bbox)
 
 		cloud = np.array([[point_cloud.get_value(x,y)
 						for x in range(x_min, x_max+1)] 
 						for y in range(y_min, y_max+1)])
 
-		box_dists = np.sqrt(cloud[:,:,0]*cloud[:,:,0]
-						+ cloud[:,:,1]*cloud[:,:,1]
-						+ cloud[:,:,2]*cloud[:,:,2])
+		# Eucledian Distance
+		box_dists = np.sqrt(cloud[:,:,0]*cloud[:,:,0] + cloud[:,:,1]*cloud[:,:,1] + cloud[:,:,2]*cloud[:,:,2])
 
 		return np.min(box_dists)
 
-	def distance_to_collision(self, od_bbox=None, point_cloud=None):
+	def distance_to_collision(self, od_bbox=None, point_cloud=None, image=None, return_image=False, show=False, keep_showing=False):
 		"""Calculates the minimum distance to all detected objects.
 
 		Parameters:
@@ -269,77 +269,74 @@ class ComputerVision:
 			min_distances
 				the minimum distance for every detected object in the current frame
 		"""
-		#TODO: Check that this function works with ZED camera
 		if point_cloud is None:
 			point_cloud = self.point_cloud()
 		if od_bbox is None:
 			od_bbox = self.object_detection()
 
 		boxes = od_bbox[:, :4]
-		scores = od_bbox[:, 4]
-		classes = od_bbox[:, 5]
-		valid_detections = len(od_bbox)
+		# scores = od_bbox[:, 4]
+		# classes = od_bbox[:, 5]
+		# valid_detections = len(od_bbox)
 
-		min_distances = []
-		for i in range(valid_detections):
-			class_id = classes[i]
-			if class_id in OD_USEFUL_CLASSES:
-				bbox = boxes[i]
-				min_distances.append(self._get_dist(bbox, point_cloud))
+		min_dists = np.array([self._get_dist(bbox, point_cloud) for bbox in boxes])
 
-		return np.array(min_distances)
+		if show or return_image:
+			if image is None:
+				raise NoImageError
+			dists_img = self.od_model._show_min_dists_on_image(image, od_bbox, min_dists, show=show, keep_showing=keep_showing)
 
-	def show_distance_to_collision(self, img, od_bbox, min_dists, show=False, keep_showing=False):
-		"""Shows the minimum distance to all detected objects in an image.
+		if return_image:
+			return min_dists, dists_img
+		else:
+			return min_dists
 
-		Parameters:
-			img
-				left image from the camera
-			od_bbox
-				output of the OD model computed on the current frame
-			min_dists
-				output of the distance_to_collision function
-			show
+	def _window(self, get_lims=False):
+		img_h, img_w = self.od_model.img_shape
+		h_llim = 0
+		w_llim = img_w // 3
+		h_ulim = img_h - (img_h // 4)
+		w_ulim = 1- wllim
 
-		Returns:
-			img
-				modified image after adding bounding boxes
-		"""
-		d2c_img = img.copy()
+		if get_lims:
+			return (h_llim, h_ulim), (w_llim, w_ulim)
 
-		for (*xyxy, conf, class_id), dist in reversed(zip(od_bbox, min_dists)):
-				if class_id in USEFUL_CLASSES:
-					label = '{}: {:.2f} cm'.format(CLASS_NAMES[int(class_id)], dist)
-					plot_one_box(xyxy, d2c_img, label=label, color=CLASS_COLORS[int(class_id)], line_thickness=LINE_THICKNESS)
-		
-		if show:
-			cv2.imshow('Distance To Collision', d2c_img)
-			if not keep_showing:
-				cv2.waitKey(0)
-				cv2.destroyWindow('Distance To Collision')
-
-		return d2c_img
-
-	def is_close_to_collision(self, min_dists=None, thres=D2C_THRESHOLD):
-		if min_dists is None:
-			min_dists = self.distance_to_collision()
-
-		min_dist = min_dists[np.isfinite(min_dists)].min()
-		return (min_dist < D2C_THRESHOLD)
+		window = slice(h_llim, h_ulim), slice(w_llim, w_ulim)
+		return window
 
 	def is_close_to_collision_simple(self, depth_map=None, thres=D2C_THRESHOLD, return_min_dist=False):
 		if depth_map is None:
 			depth_map = self.depth_map()
 
-		img_h, img_w = depth_map.shape
-		third_img_h = img_h // 3
-		quart_img_w = img_w // 4
-
-		window = depth_map[:-quart_img_h, third_img_w:-third_img_w]
-		min_dist = window[np.isfinite(window)].min()
-		
+		min_dist = depth_map[self._window()].min()
 		is_close = min_dist < D2C_THRESHOLD
+
 		if return_min_dist:
 			return min_dist, is_close
 		else:
 			return is_close
+
+	def _boxes_in_window(self, od_bbox):
+		(h_llim, h_ulim), (w_llim, w_ulim) = self._window(get_lims=True)
+		xmin = od_bbox[:, 0]
+		# ymin = od_bbox[:, 1]
+		xmax = od_bbox[:, 2]
+		ymax = od_bbox[:, 3]
+
+		in_window = (x_min > w_llim  &  xmax < w_ulim  &  ymax < h_ulim)
+		print(in_window.shape) # (n)
+		return in_window
+
+	def is_close_to_collision(self, od_bbox=None, min_dists=None, thres=D2C_THRESHOLD):
+		if od_bbox is None:
+			od_bbox = self.object_detection()
+		if min_dists is None:
+			point_cloud = self.point_cloud()
+			min_dists = self.distance_to_collision(od_bbox=od_bbox, point_cloud=point_cloud)
+
+		min_dists = min_dists[self._boxes_in_window(od_bbox)]
+
+		min_dist = min_dists[np.isfinite(min_dists)].min()
+		return (min_dist < D2C_THRESHOLD)
+
+	

@@ -17,7 +17,7 @@ class args:
     image_size = 608
     confidence_threshold = 0.3
     iou_threshold = 0.6
-    device = ""     # device id (i.e. 0 or 0,1) or cpu. (default="")
+    device = "0"     # device id (i.e. 0 or 0,1) or cpu. (default="")
     classes = None
     agnostic_nms = False
 
@@ -103,9 +103,10 @@ class ODModel:
                                       agnostic=args.agnostic_nms)
 
         pred_bbox = self._fix_bbox(pred_bbox, input_img_shape)
-        return pred_bbox
+        return pred_bbox    # output_format: (xmin, ymin, xmax, ymax, prob, class_id)
 
-    def show_on_image(self, img, pred_bbox, show=False, keep_showing=False):
+    def show_on_image(self, image, pred_bbox, show=False, keep_showing=False):
+        img = image.copy()
         for *xyxy, confidence, class_id in pred_bbox:
             if class_id in USEFUL_CLASSES:
                 label = f"{CLASS_NAMES[int(class_id)]} {confidence * 100:.2f}%"
@@ -130,6 +131,35 @@ class ODModel:
         pred_bbox[:, 3] *= height_ratio # y_max
 
         return pred_bbox
+
+    def _show_min_dists_on_image(self, image, od_bbox, min_dists, show=False, keep_showing=False):
+        """Shows the minimum distance to all detected objects in an image.
+
+        Parameters:
+            img
+                left image from the camera
+            od_bbox
+                output of the OD model computed on the current frame
+            min_dists
+                output of the distance_to_collision function
+            show
+
+        Returns:
+            img
+                modified image after adding bounding boxes
+        """
+        img = image.copy()
+        for (*xyxy, confidence, class_id), dist in zip(pred_bbox, min_dists):
+            if class_id in USEFUL_CLASSES:
+                label = '{}: {:.2f} cm'.format(CLASS_NAMES[int(class_id)], dist)
+                plot_one_box(xyxy, img, label=label, color=CLASS_COLORS[int(class_id)])
+
+        if show:
+            cv2.imshow('Distance To Collision', img)
+            if not keep_showing:
+                cv2.waitKey(0)
+                cv2.destroyWindow('Distance To Collision')
+        return img
 
 
 
