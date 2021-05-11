@@ -4,10 +4,9 @@ import datetime
 from BCInterface.Preprocessing import Filesmanager
 from BCInterface.Headset import Collect
 print(Collect)
-# from collect import *
-import concurrent.futures as cf
-from PyQt5.QtCore import QObject, pyqtSignal
 
+import threading
+from PyQt5.QtCore import QObject, pyqtSignal
 
 freq_map = { 1:12.00, 2:10.00, 3:8.57, 4:7.50, 5:6.66}
 
@@ -48,17 +47,14 @@ class DataAcquisition_thread(QObject):
     
      
     def collectData(self):
-        self.exe = cf.ThreadPoolExecutor()
-        self.future = self.exe.submit(self.collectSeq, self.flickering_time,self.flag,self.sequence)
-               
+        self.dataThread = threading.Thread(target=self.collectSeq, args=(self.flickering_time, self.flag, self.sequence), daemon=True)
+        self.dataThread.start()
 
-
-    def collectSeq(self,flickering_time,flag,sequence):
+    def collectSeq(self, flickering_time, flag, sequence):
 
         for i in range (len(sequence)*2):
-            #print(f'start collect at: {datetime.datetime.now()}\n')
+            print(f'start collect at: {datetime.datetime.now()}\n')
             Data = self.collect.record(flickering_time)
-        
 
             if flag:
                 # Data['Label'] = self.sequence[int(i/2)]
@@ -68,8 +64,7 @@ class DataAcquisition_thread(QObject):
 
             flag = not flag
             self.collect_signal.emit(flag)
-            # Data=[]
-            
+
 
         self.finish_signal.emit()
 

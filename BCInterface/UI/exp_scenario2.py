@@ -5,17 +5,12 @@ import datetime
 
 from .gui_comp import FlashingBox, movigArrow
 from .dataThread_pool import DataAcquisition_thread
-
-# import DataAcquisition_thread
-
-
-from PyQt5.QtCore import QTimer, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QWidget, QLabel, QApplication, QGridLayout, QVBoxLayout, QMessageBox
+from PyQt5.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QMessageBox
 
 
 class expScenario(QWidget):
  
-    def __init__(self, boxes_num=4, flash_time=1,sequence=[4 ,2 ,3 ,1 ,2],freqs= [12.0, 10.0, 8.57, 7.5]):
+    def __init__(self, boxes_num=4, flash_time=1, sequence=[4, 2, 3, 1, 2], freqs=[12.0, 10.0, 8.57, 7.5]):
 
         super(expScenario, self).__init__()
 
@@ -27,11 +22,11 @@ class expScenario(QWidget):
         self.collect = False
         self.boxes = []
         self.freq_index = 0
-        self.sequence_len = len (sequence)
+        self.sequence_len = len(sequence)
 
         self.setLayout(QVBoxLayout())
     
-        self.data_acqu = DataAcquisition_thread(self.seq ,self.flash_time)
+        self.data_acqu = DataAcquisition_thread(self.seq, self.flash_time)
         self.data_acqu.collect_signal.connect(self.switch_mode)
         self.data_acqu.finish_signal.connect(self.sessionEnd)
 
@@ -72,16 +67,22 @@ class expScenario(QWidget):
         container = QWidget()
         container.setLayout(QGridLayout())
         container.layout().addWidget(self.boxes[0], 0, 0)
+        container.layout().addWidget(QLabel(), 0, 1)
         if self.boxes_num == 4:
             container.layout().addWidget(self.boxes[1], 2, 0)
             container.layout().addWidget(self.boxes[2], 0, 2)
             container.layout().addWidget(self.boxes[3], 2, 2)
-        
-        l1 = QLabel()
-        l1.adjustSize()
-        self.arrow = movigArrow(l1, self.flash_time,self.seq,start_flash=False)
-        container.layout().addWidget(l1, 1, 0, 1, 3)
-        container.layout().addWidget(QLabel(), 0, 1)
+            # arrow
+            l1 = QLabel()
+            l1.adjustSize()
+            l1.setStyleSheet("background-color: rgb(0, 0, 0)")
+            self.arrow = movigArrow(l1, self.flash_time, self.seq, start_flash=False)
+            container.layout().addWidget(l1, 1, 0, 1, 3)
+
+
+
+
+
         # add widget on the main window
         self.layout().addWidget(container)
 
@@ -93,14 +94,14 @@ class expScenario(QWidget):
         if self.boxes_num == 4:
             self.arrow.startMoving()
         
-        self.data_acqu.collectData() 
- 
+        self.data_acqu.collectData()  # collect thread
+
     
-    def switch_mode(self,collect):
-        print (collect)
+    def switch_mode(self, collect):
+        print(collect)
         if collect:
             self.start_box_flashing()
-            #print(f'start flashing at: {datetime.datetime.now()}')
+            print(f'start flashing at: {datetime.datetime.now()}')
         else:
             self.stop_box_flashing()
 
