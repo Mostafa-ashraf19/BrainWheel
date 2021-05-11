@@ -54,10 +54,44 @@ class ComputerVision:
 					od_bbox=False, od_img=False, ss_pred=False, ss_img=False,
 					dist_to_col=False, dist_to_col_img=False,
 					is_close=False, min_dist=False, is_close_simple=False, min_dist_simple=False):
+		"""Main generator function for the ComputerVision class.
+		
+		Preforms all prerequisite functions to return any and all required data from the CV module.
+		May also be used in for loops as follows:
+		```python
+		CV = ComputerVision()
+		for cache in CV.loop(data1=True, data2=True, ..., dataN=True):
+			data1, data2, ..., dataN = cache
+			# use data1 to dataN directly ...
+		```
+
+		Order of returned Parameters:
+			- l_img
+			- r_img
+			- depth_map
+			- depth_map_img
+			- point_cloud
+			- od_bbox
+			- od_img
+			- ss_pred
+			- ss_img
+			- dist_to_col (aka: min_dists)
+			- dist_to_col_img
+			- is_close
+			- min_dist
+			- is_close_simple
+			- min_dist_simple
+		
+		Parameterss:
+			all parameters are bools that if set to true, will be returned in the order described above
+			(not in the order of being called!)
+		Returns:
+			all parameters that have been set to True.
+		"""
 		is_c = is_close or min_dist
 		is_c_s = is_close_simple or min_dist_simple
-		d2c = dist_to_col or dist_to_col_img 		or is_c
-		od = od_bbox or od_img						or d2c
+		d2c = dist_to_col or dist_to_col_img or is_c
+		od = od_bbox or od_img or d2c
 		ss = ss_pred or ss_img
 		
 		runtime_parameters = sl.RuntimeParameters()
@@ -93,7 +127,7 @@ class ComputerVision:
 						cache.append(_point_cloud.get_data())
 
 				if od:
-					_od_bbox = self.object_detection(img=_l_img, return_image=od_img)
+					_od_bbox = self.object_detection(_l_img, return_image=od_img)
 					if od_img:
 						_od_bbox, _od_img = _od_bbox
 					if od_bbox:
@@ -102,7 +136,7 @@ class ComputerVision:
 						cache.append(_od_img)
 
 				if ss:
-					_ss_pred = self.semantic_segmentation(img=_l_img, return_image=ss_img)
+					_ss_pred = self.semantic_segmentation(_l_img, return_image=ss_img)
 					if ss_img:
 						_ss_pred, _ss_img = _ss_pred
 					if ss_pred:
@@ -141,6 +175,7 @@ class ComputerVision:
 				yield cache
 			else:
 				raise StopIteration
+
 			# use 'q' to quit the loop
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				raise StopIteration
@@ -292,6 +327,9 @@ class ComputerVision:
 			occ_grid
 				occupancy grid.
 		"""
+		if point_cloud is None or ss_pred is None:
+			gen = self.loop(point_cloud=True, ss_pred=True)
+			point_cloud, ss_pred = next(gen)
 		#TODO: Check that this function works with ZED camera
 		pass
 	
@@ -325,10 +363,9 @@ class ComputerVision:
 			min_distances
 				the minimum distance for every detected object in the current frame
 		"""
-		if point_cloud is None:
-			point_cloud = self.point_cloud()
-		if od_bbox is None:
-			od_bbox = self.object_detection()
+		if point_cloud is None or od_bbox is None:
+			gen = self.loop(point_cloud=True, od_bbox=True)
+			point_cloud, od_bbox = next(gen)
 
 		boxes = od_bbox[:, :4]
 		# scores = od_bbox[:, 4]
@@ -384,11 +421,9 @@ class ComputerVision:
 		return in_window
 
 	def is_close_to_collision(self, od_bbox=None, min_dists=None, *, return_min_dist=False, thres=D2C_THRESHOLD):
-		if od_bbox is None:
-			od_bbox = self.object_detection()
-		if min_dists is None:
-			point_cloud = self.point_cloud()
-			min_dists = self.distance_to_collision(od_bbox=od_bbox, point_cloud=point_cloud)
+		if od_bbox is None or min_dists is None:
+			gen = self.loop(od_bbox=True, dist_to_col=True)
+			od_bbox, dist_to_col = next(gen)
 
 		min_dists = min_dists[self._boxes_in_window(od_bbox)]
 
