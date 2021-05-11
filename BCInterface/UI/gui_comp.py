@@ -2,11 +2,11 @@ import os
 import time
 
 from PyQt5.QtCore import QTimer
-from PyQt5.QtGui import  QPixmap
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QLabel
 
-images = ['up.png', 'right.png', 'left.png', 'back.png']
-
+images = [os.path.join(os.getcwd() +'\\BCInterface\\assets\\',image) for image in ['up.png', 'right.png', 'left.png', 'back.png']]
+arrow_path = os.path.join(os.getcwd() +'\\BCInterface\\assets\\','arrow.png')
 
 class FlashingBox(QLabel):
   def __init__(self, freq, idx):
@@ -15,26 +15,23 @@ class FlashingBox(QLabel):
     self.idx = idx
     self.timer = QTimer(self, interval=int(1000/(2 * freq)))
     self.timer.timeout.connect(self.flashing)
-    #self.setStyleSheet(f"background-image: url({images[idx]}); background-repeat: no-repeat; background-position: center;background-color: rgb(0, 0, 0);Width : 50%")
-    self.setStyleSheet("background-color: rgb(0, 0, 0)")
+    image = QPixmap(images[self.idx])
+    self.setPixmap(image.scaled(200,200))
+    self.setScaledContents(1)
 
   def startFlashing(self):
     self.timer.start()
 
   def stopFlashing(self):
     self.timer.stop()
-    #self.setStyleSheet(f"background-image: url({images[self.idx]}); background-repeat: no-repeat; background-position: center;background-color: rgb(0, 0, 0);Width : 50%")
     self.setStyleSheet("background-color: rgb(0, 0, 0)")
 
   def flashing(self):
     if self.flag:
-      #self.setStyleSheet(f"background-image: url({images[self.idx]}); background-repeat: no-repeat; background-position: center;background-color: rgb(0, 0, 0)")
        self.setStyleSheet("background-color: rgb(0, 0, 0)")
 
-
     else:
-      #self.setStyleSheet(f"background-image: url({images[self.idx]}); background-repeat: no-repeat; background-position: center;background-color: rgb(131, 238, 66)")
-      self.setStyleSheet("background-color: rgb(131, 238, 66)")
+        self.setStyleSheet("background-color: rgb(131, 238, 66)")
 
     self.flag = not self.flag
 
@@ -43,10 +40,10 @@ class FlashingBox(QLabel):
 
 class movigArrow(QLabel):
     
-    def __init__(self,parent,delay,seq,start_flash=False):
+    def __init__(self, parent, delay, seq, start_flash=False):
         super(movigArrow, self).__init__(parent)
 
-        self.seq_idx =0 
+        self.seq_idx = 0
         self.flag = True
         self.hide() == True
         self.location = [[150, 20], [1100, 20], [150, 150], [1100, 150]]# nzbtha m3 l freq
@@ -60,9 +57,7 @@ class movigArrow(QLabel):
             self.move(*self.location[self.location_index])
             self.show()==True
 
-        
-        pixmap = QPixmap('star.png')
-        self.setPixmap(pixmap)
+        self.setPixmap(QPixmap(arrow_path))
 
         # set timer for moving flag to recognize current frequency 
         self.timer = QTimer(self, interval=1000*delay)

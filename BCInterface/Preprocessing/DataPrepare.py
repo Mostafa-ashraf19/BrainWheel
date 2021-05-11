@@ -127,7 +127,8 @@ class DataPrepare:
     def Extraxt_trials(self,Data, Num_sec):
         trials = list()
         for i in range(0, Data.shape[0], 128 * Num_sec):
-            trials.append(Data.iloc[i:i + 128 * Num_sec, :-1])
+            # trials.append(Data.iloc[i:i + 128 * Num_sec, :-1])
+            trials.append(Data.iloc[i:i + 128 * Num_sec, :])
 
         return trials
 

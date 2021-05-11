@@ -3,8 +3,8 @@ import pandas as pd
 import logging
 import datetime
 
-logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
-
+# logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename='mostafa.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
 channels_def = ['AF3', 'F7', 'F3', 'FC5', 'T7', 'P7', 'O1', 'O2', 'P8', 'T8', 'FC6', 'F4', 'F8', 'AF4']
 channels_indix=[  0,     1,   2,     3,     4,    5,    6,    7,    8,    9,    10,    11,   12,   13 ]
@@ -43,11 +43,15 @@ class Collect:
 
         # with Emotiv() as headset:
         all_data = []
-        logging.warning('start collect '+ str(datetime.datetime.now()))
-        for _ in range(no_of_seconds*128):
+        # logging.warning('start collect '+ str(datetime.datetime.now()))
+        # logging.info(f'Start Record at {str(datetime.datetime.now())}')
+        for i in range(no_of_seconds*128):
             all_data.append(self.get_single_sample(self.reader))
-            logging.warning('collect '+ str(datetime.datetime.now()))
-        logging.warning('end collect '+ str(datetime.datetime.now()))
+            # logging.warning('collect '+ str(datetime.datetime.now()))
+            # logging.info(f'Current Sample at {str(datetime.datetime.now())} index {i}')
+        # logging.info(f'End Record at {str(datetime.datetime.now())}')
+        # logging.warning('end collect '+ str(datetime.datetime.now()))
+        print(2)
         return all_data
 
     def get_single_sample(self, headset):
@@ -93,8 +97,12 @@ class Collect:
         else:
             data = []
             self.reader.wanna_read(True)
-            for _ in range(no_of_seconds * 128):
+            logging.warning(f'Start Record at {str(datetime.datetime.now())}')
+            for i in range(no_of_seconds * 128):
                 data.append(self.record_eeg())
+                logging.warning(f'Current Sample at {str(datetime.datetime.now())} index {i}')
+            logging.warning(f'End Record at {str(datetime.datetime.now())}')
+            logging.warning('*'*10)
             self.reader.wanna_read(False)
             return pd.DataFrame(data, columns=channels_def)
 
