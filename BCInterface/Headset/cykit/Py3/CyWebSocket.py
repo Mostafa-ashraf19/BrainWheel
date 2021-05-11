@@ -27,7 +27,7 @@ class dbg():
     def txt(custom_string):
         return
         try:
-            print(custom_string)
+            print((custom_string))
             return
         except OSError as exp:
             return
@@ -42,7 +42,7 @@ class mirror():
             return
 
 class socketIO():
-    
+
     def __init__(self, port, uid, ioHandler):
         self.time_delay = .001
         self.openvibe = False
