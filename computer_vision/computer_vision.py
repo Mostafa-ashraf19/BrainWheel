@@ -145,7 +145,7 @@ class ComputerVision:
 						cache.append(_ss_img)
 
 				if d2c:
-					_dist_to_col = self.distance_to_collision(_od_bbox, _point_cloud, _l_img, return_image=dist_to_col_img)
+					_dist_to_col = self.distance_to_collision(_od_bbox, _point_cloud, image=_l_img, return_image=dist_to_col_img)
 					if dist_to_col_img:
 						_dist_to_col, _dist_to_col_img = _dist_to_col
 					if dist_to_col:
@@ -211,9 +211,9 @@ class ComputerVision:
 		"""Returns the current depth map.
 
 		Parameters:
-			return_image=False
-				Bool to define whether to return the depth map as a 2D Matrix
-				or as an Image
+			return_img=False
+				if True, the function will also return an image of the depth map.
+				else, the function will return the depth map only (without the image).
 
 			show=False
 				Bool to show if the user wants to see the depth map.
@@ -256,14 +256,21 @@ class ComputerVision:
 		return point_cloud
 
 	def object_detection(self, img=None, *, return_image=False, show=False, keep_showing=False):
-		"""Uses a ML model (Yolov3) to detect objects in the picture.
+		"""Uses a ML model (Yolov3-Tiny) to detect objects in the picture.
 
 		Parameters:
 			img=None
 				Image for detection.
-				if None, the function will take the cached image or use a new image.
+				if None, the function will use a new image.
+			return_img=False
+				if True, the function will also return the image of the OD model's prediction.
+				else, the function will return the model prediction only (without the image).
 			show=False
 				Bool to show if the user wants to see the object detection image.
+			keep_showing=False
+				Bool to define whether the user wants to continue with the code while
+				keeping the show window. If False, the code execution will stop until
+				the window is closed.
 
 		Returns:
 			pred
@@ -289,10 +296,17 @@ class ComputerVision:
 
 		Parameters:
 			img=None
-				Image for segmentation.
-				if None, the function will take the cached image or use a new image.
+				Image for detection.
+				if None, the function will use a new image.
+			return_img=False
+				if True, the function will also return the image of the SS model's prediction.
+				else, the function will return the model prediction only (without the image).
 			show=False
 				Bool to show if the user wants to see the semantic segmentation image.
+			keep_showing=False
+				Bool to define whether the user wants to continue with the code while
+				keeping the show window. If False, the code execution will stop until
+				the window is closed.
 
 		Returns:
 			pred
@@ -350,18 +364,31 @@ class ComputerVision:
 
 		return np.min(box_dists)
 
-	def distance_to_collision(self, od_bbox=None, point_cloud=None, image=None, *, return_image=False, show=False, keep_showing=False):
+	def distance_to_collision(self, od_bbox=None, point_cloud=None, *, image=None, return_image=False, show=False, keep_showing=False):
 		"""Calculates the minimum distance to all detected objects.
 
 		Parameters:
 			od_bbox
-				output of the OD model computed on the current frame
-			depth_map
-				depth map of the current frame
+				output of the OD model computed on the current frame.
+			point_cloud
+				point_cloud of the frontal view of the camera.
+			image
+				the current image which is used for showing the prediction on the image.
+			return_img=False
+				if True, the function will also return an image showing the distance to each object.
+				else, the function will return the minimum distances only (without the image).
+			show=False
+				Bool to show if the user wants to see the distance to collision image.
+			keep_showing=False
+				Bool to define whether the user wants to continue with the code while
+				keeping the show window. If False, the code execution will stop until
+				the window is closed.
 
 		Returns:
-			min_distances
+			min_dists
 				the minimum distance for every detected object in the current frame
+			dists_img
+				the image showing the minimum distance to each object
 		"""
 		if point_cloud is None or od_bbox is None:
 			gen = self.loop(point_cloud=True, od_bbox=True)
@@ -385,6 +412,10 @@ class ComputerVision:
 			return min_dists
 
 	def _window(self, get_lims=False):
+		"""Returns a window slice object for the image where objects must be detected.
+
+		Helper Function!
+		"""
 		img_h, img_w = self.od_model.img_shape
 		h_llim = 0
 		w_llim = img_w // 3
@@ -398,6 +429,26 @@ class ComputerVision:
 		return window
 
 	def is_close_to_collision_simple(self, depth_map=None, *, return_min_dist=False, thres=D2C_THRESHOLD):
+		"""Checks if the camera is close to collsion.
+
+		Parameters:
+			depth_map=None
+				depth map of current frame.
+				if None, the function will compute the depth map of a newly captures frame.
+
+			return_min_dist=False
+				if True, the function will also return the minimum distance to the closest object.
+				else, the function will return the boolian value only.
+			thres
+				defines a threshold for detecting whether the object is "close" or "not close".
+
+		Returns:
+			is_close
+				a boolean to show whether the distance to the closest object is less than
+				the given threshold
+			min_dist
+				the minimum distance to the closest object.
+		"""
 		if depth_map is None:
 			depth_map = self.depth_map()
 
@@ -410,17 +461,42 @@ class ComputerVision:
 			return is_close
 
 	def _boxes_in_window(self, od_bbox):
+		"""Return a boolean vector that shows for each bounding box in od_bbox, if it is in the window or not.
+		
+		Helper Function!
+		"""
 		(h_llim, h_ulim), (w_llim, w_ulim) = self._window(get_lims=True)
 		xmin = od_bbox[:, 0]
 		# ymin = od_bbox[:, 1]
 		xmax = od_bbox[:, 2]
-		ymax = od_bbox[:, 3]
+		# ymax = od_bbox[:, 3]
 
-		in_window = (x_min > w_llim  &  xmax < w_ulim  &  ymax < h_ulim)
+		in_window = (xmax > w_llim  &  xmin < w_ulim)
 		print(in_window.shape) # (n)
 		return in_window
 
 	def is_close_to_collision(self, od_bbox=None, min_dists=None, *, return_min_dist=False, thres=D2C_THRESHOLD):
+		"""Checks if the camera is close to collsion.
+
+		Parameters:
+			od_bbox
+				output of the OD model computed on the current frame.
+			min_dists
+				the minimum distance to each object in od_bbox.
+
+			return_min_dist=False
+				if True, the function will also return the minimum distance to the closest object.
+				else, the function will return the boolian value only.
+			thres
+				defines a threshold for detecting whether the object is "close" or "not close".
+
+		Returns:
+			is_close
+				a boolean to show whether the distance to the closest object is less than
+				the given threshold
+			min_dist
+				the minimum distance to the closest object.
+		"""
 		if od_bbox is None or min_dists is None:
 			gen = self.loop(od_bbox=True, dist_to_col=True)
 			od_bbox, dist_to_col = next(gen)
