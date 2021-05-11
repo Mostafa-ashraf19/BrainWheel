@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import math
 from BCInterface.Helpers import helper
 
 channels_def = ['AF3', 'F7', 'F3', 'FC5', 'T7', 'P7', 'O1', 'O2', 'P8', 'T8', 'FC6', 'F4', 'F8', 'AF4']
@@ -30,25 +31,37 @@ class graphs:
             used to visualize power spectrum for each given channel
         """
 
+		num_channels = len(channel)
 		xcoords = [7.50, 8.57, 10, 12]
 		# colors for the lines
 		colors = ['g', 'r', 'g', 'r']
 
-		ig, axis = plt.subplots(int(len(channel) / 2), 2, figsize=(20, 20))
+		if num_channels >7:
+			half = math.ceil(num_channels / 2)
+			ig, axis = plt.subplots(half, 2, figsize=(20, 20))
+			for i, current_c in enumerate(channel):
+				# to print till freq approx equals 50 hz
+				f = freq[current_c][:-80]
+				Pxx_den = power[current_c][:-80]
+				for xc, c in zip(xcoords, colors):
+					axis[i % half, int(i >= half)].axvline(x=xc, label='line at x = {}'.format(xc), c=c)
+				axis[i % half, int(i >= half)].plot(f, Pxx_den)
+				axis[i % half, int(i >= half)].set_title(channels_def[current_c])
+				axis[i % half, int(i >= half)].grid(True)
+		else:
+			ig, axis = plt.subplots(num_channels, figsize=(20, 20))
+			for i, current_c in enumerate(channel):
+				# to print till freq approx equals 50 hz
+				f = freq[current_c][:-80]
+				Pxx_den = power[current_c][:-80]
+				for xc, c in zip(xcoords, colors):
+					axis[i].axvline(x=xc, label='line at x = {}'.format(xc), c=c)
+				axis[i].plot(f, Pxx_den)
+				axis[i].set_title(channels_def[current_c])
+				axis[i].grid(True)
+
 		ig.suptitle('frequency:{}'.format(lable))
 
-		i = 0
-		print(f'len of f {len(freq)}')
-		for f, Pxx_den in zip(freq, power):
-			# to print till freq approx equals 50 hz
-			f = f[:-80]
-			Pxx_den = Pxx_den[:-80]
-			for xc, c in zip(xcoords, colors):
-				axis[i % 7, int(i >= 7)].axvline(x=xc, label='line at x = {}'.format(xc), c=c)
-			axis[i % 7, int(i >= 7)].plot(f, Pxx_den)
-			axis[i % 7, int(i >= 7)].set_title(channel[i])
-			axis[i % 7, int(i >= 7)].grid(True)
-			i += 1
 
 
 		plt.title
