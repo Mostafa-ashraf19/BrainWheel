@@ -50,23 +50,33 @@ class ComputerVision:
 	def __del__(self):
 		self.zed.close()
 
-	def loop(self, *, l_img=True, r_img=False, depth_map=False, depth_map_img=False, point_cloud=False):
+	def loop(self, *, l_img=True, r_img=False, depth_map=False, depth_map_img=False, point_cloud=False,
+					od_bbox=False, od_img=False, ss_pred=False, ss_img=False,
+					dist_to_col=False, dist_to_col_img=False,
+					is_close=False, min_dist=False, is_close_simple=False, min_dist_simple=False):
+		is_c = is_close or min_dist
+		is_c_s = is_close_simple or min_dist_simple
+		d2c = dist_to_col or dist_to_col_img 		or is_c
+		od = od_bbox or od_img						or d2c
+		ss = ss_pred or ss_img
+		
 		runtime_parameters = sl.RuntimeParameters()
 
 		while True:
 			cache = []
 			if self.zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
-				if l_img:
+				if l_img or od or ss or d2c:
 					_l_img = sl.Mat()
 					self.zed.retrieve_image(_l_img, sl.VIEW.LEFT)
-					cache.append(_l_img.get_data())
+					if l_img:
+						cache.append(_l_img.get_data())
 
 				if r_img:
 					_r_img = sl.Mat()
 					self.zed.retrieve_image(_r_img, sl.VIEW.RIGHT)
 					cache.append(_r_img.get_data())
 
-				if depth_map:
+				if depth_map or is_c_s:
 					_depth_map = sl.Mat()
 					self.zed.retrieve_measure(_depth_map, sl.MEASURE.DEPTH)
 					cache.append(_depth_map.get_data())		
@@ -76,10 +86,56 @@ class ComputerVision:
 					self.zed.retrieve_image(_depth_map_img, sl.VIEW.DEPTH)
 					cache.append(_depth_map_img.get_data())
 
-				if point_cloud:
+				if point_cloud or d2c:
 					_point_cloud = sl.Mat()
 					self.zed.retrieve_measure(_point_cloud, sl.MEASURE.XYZRGBA)
-					cache.append(_point_cloud.get_data())
+					if point_cloud:
+						cache.append(_point_cloud.get_data())
+
+				if od:
+					_od_bbox = self.object_detection(img=_l_img, return_image=od_img)
+					if od_img:
+						_od_bbox, _od_img = _od_bbox
+					if od_bbox:
+						cache.append(_od_bbox)
+					if od_img:
+						cache.append(_od_img)
+
+				if ss:
+					_ss_pred = self.semantic_segmentation(img=_l_img, return_image=ss_img)
+					if ss_img:
+						_ss_pred, _ss_img = _ss_pred
+					if ss_pred:
+						cache.append(_ss_pred)
+					if ss_img:
+						cache.append(_ss_img)
+
+				if d2c:
+					_dist_to_col = self.distance_to_collision(_od_bbox, _point_cloud, _l_img, return_image=dist_to_col_img)
+					if dist_to_col_img:
+						_dist_to_col, _dist_to_col_img = _dist_to_col
+					if dist_to_col:
+						cache.append(_dist_to_col)
+					if dist_to_col_img:
+						cache.append(_dist_to_col_img)
+
+				if is_c:
+					_is_close = self.is_close_to_collision(_od_bbox, _dist_to_col, return_min_dist=min_dist)
+					if min_dist:
+						_is_close, _min_dist = _is_close
+					if is_close:
+						cache.append(_is_close)
+					if min_dist:
+						cache.append(_min_dist)
+
+				if is_c_s:
+					_is_close = self.is_close_to_collision_simple(_depth_map, return_min_dist=min_dist_simple)
+					if min_dist_simple:
+						_is_close, _min_dist = _is_close
+					if is_close_simple:
+						cache.append(_is_close)
+					if min_dist_simple:
+						cache.append(_min_dist)
 
 			if cache:
 				yield cache
@@ -89,7 +145,7 @@ class ComputerVision:
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				raise StopIteration
 
-	def capture(self, show=False, keep_showing=False):
+	def capture(self, *, show=False, keep_showing=False):
 		"""Fetches left and right images from cameras and places them in the cache.
 		
 		Parameters:
@@ -116,7 +172,7 @@ class ComputerVision:
 
 		return l_img, r_img
 
-	def depth_map(self, return_image=False, show=False, keep_showing=False):
+	def depth_map(self, *, return_image=False, show=False, keep_showing=False):
 		"""Returns the current depth map.
 
 		Parameters:
@@ -164,7 +220,7 @@ class ComputerVision:
 		point_cloud = next(gen)
 		return point_cloud
 
-	def object_detection(self, img=None, return_image=False, show=False, keep_showing=False):
+	def object_detection(self, img=None, *, return_image=False, show=False, keep_showing=False):
 		"""Uses a ML model (Yolov3) to detect objects in the picture.
 
 		Parameters:
@@ -193,7 +249,7 @@ class ComputerVision:
 		else:
 			return pred_bbox
 
-	def semantic_segmentation(self, img=None, return_image=False, show=False, keep_showing=False):
+	def semantic_segmentation(self, img=None, *, return_image=False, show=False, keep_showing=False):
 		"""Uses a ML model (ICNet) to detect objects in the picture.
 
 		Parameters:
@@ -222,7 +278,7 @@ class ComputerVision:
 		else:
 			return pred
 
-	def occupancy_grid(self, point_cloud=None, ss_pred=None, return_image=False, show=False, keep_showing=False):
+	def occupancy_grid(self, point_cloud=None, ss_pred=None, *, return_image=False, show=False, keep_showing=False):
 		"""Uses RANSAC and other algorithms to compute the occupancy grid of the current frame.
 
 		Parameters:
@@ -256,7 +312,7 @@ class ComputerVision:
 
 		return np.min(box_dists)
 
-	def distance_to_collision(self, od_bbox=None, point_cloud=None, image=None, return_image=False, show=False, keep_showing=False):
+	def distance_to_collision(self, od_bbox=None, point_cloud=None, image=None, *, return_image=False, show=False, keep_showing=False):
 		"""Calculates the minimum distance to all detected objects.
 
 		Parameters:
@@ -304,7 +360,7 @@ class ComputerVision:
 		window = slice(h_llim, h_ulim), slice(w_llim, w_ulim)
 		return window
 
-	def is_close_to_collision_simple(self, depth_map=None, thres=D2C_THRESHOLD, return_min_dist=False):
+	def is_close_to_collision_simple(self, depth_map=None, *, return_min_dist=False, thres=D2C_THRESHOLD):
 		if depth_map is None:
 			depth_map = self.depth_map()
 
@@ -312,7 +368,7 @@ class ComputerVision:
 		is_close = min_dist < D2C_THRESHOLD
 
 		if return_min_dist:
-			return min_dist, is_close
+			return is_close, min_dist
 		else:
 			return is_close
 
@@ -327,7 +383,7 @@ class ComputerVision:
 		print(in_window.shape) # (n)
 		return in_window
 
-	def is_close_to_collision(self, od_bbox=None, min_dists=None, thres=D2C_THRESHOLD):
+	def is_close_to_collision(self, od_bbox=None, min_dists=None, *, return_min_dist=False, thres=D2C_THRESHOLD):
 		if od_bbox is None:
 			od_bbox = self.object_detection()
 		if min_dists is None:
@@ -337,6 +393,11 @@ class ComputerVision:
 		min_dists = min_dists[self._boxes_in_window(od_bbox)]
 
 		min_dist = min_dists[np.isfinite(min_dists)].min()
-		return (min_dist < D2C_THRESHOLD)
+		is_close = min_dist < D2C_THRESHOLD
+
+		if return_min_dist:
+			return is_close, min_dist
+		else:
+			return is_close
 
 	
