@@ -11,7 +11,7 @@ import numpy as np
 import cv2
 import pyzed.sl as sl
 
-from errors import CameraNotConnectedError
+from errors import CameraNotConnectedError, NoImageError
 
 # from od_model import ODModel
 from od_model import ODModelTiny as ODModel
@@ -50,23 +50,67 @@ class ComputerVision:
 	def __del__(self):
 		self.zed.close()
 
-	def loop(self, *, l_img=True, r_img=False, depth_map=False, depth_map_img=False, point_cloud=False):
+	def loop(self, *, l_img=True, r_img=False, depth_map=False, depth_map_img=False, point_cloud=False,
+					od_bbox=False, od_img=False, ss_pred=False, ss_img=False,
+					dist_to_col=False, dist_to_col_img=False,
+					is_close=False, min_dist=False, is_close_simple=False, min_dist_simple=False):
+		"""Main generator function for the ComputerVision class.
+		
+		Preforms all prerequisite functions to return any and all required data from the CV module.
+		May also be used in for loops as follows:
+		```python
+		CV = ComputerVision()
+		for cache in CV.loop(data1=True, data2=True, ..., dataN=True):
+			data1, data2, ..., dataN = cache
+			# use data1 to dataN directly ...
+		```
+
+		Order of returned Parameters:
+			- l_img
+			- r_img
+			- depth_map
+			- depth_map_img
+			- point_cloud
+			- od_bbox
+			- od_img
+			- ss_pred
+			- ss_img
+			- dist_to_col (aka: min_dists)
+			- dist_to_col_img
+			- is_close
+			- min_dist
+			- is_close_simple
+			- min_dist_simple
+		
+		Parameterss:
+			all parameters are bools that if set to true, will be returned in the order described above
+			(not in the order of being called!)
+		Returns:
+			all parameters that have been set to True.
+		"""
+		is_c = is_close or min_dist
+		is_c_s = is_close_simple or min_dist_simple
+		d2c = dist_to_col or dist_to_col_img or is_c
+		od = od_bbox or od_img or d2c
+		ss = ss_pred or ss_img
+		
 		runtime_parameters = sl.RuntimeParameters()
 
 		while True:
 			cache = []
 			if self.zed.grab(runtime_parameters) == sl.ERROR_CODE.SUCCESS:
-				if l_img:
+				if l_img or od or ss or d2c:
 					_l_img = sl.Mat()
 					self.zed.retrieve_image(_l_img, sl.VIEW.LEFT)
-					cache.append(_l_img.get_data())
+					if l_img:
+						cache.append(_l_img.get_data())
 
 				if r_img:
 					_r_img = sl.Mat()
 					self.zed.retrieve_image(_r_img, sl.VIEW.RIGHT)
 					cache.append(_r_img.get_data())
 
-				if depth_map:
+				if depth_map or is_c_s:
 					_depth_map = sl.Mat()
 					self.zed.retrieve_measure(_depth_map, sl.MEASURE.DEPTH)
 					cache.append(_depth_map.get_data())		
@@ -76,20 +120,67 @@ class ComputerVision:
 					self.zed.retrieve_image(_depth_map_img, sl.VIEW.DEPTH)
 					cache.append(_depth_map_img.get_data())
 
-				if point_cloud:
+				if point_cloud or d2c:
 					_point_cloud = sl.Mat()
 					self.zed.retrieve_measure(_point_cloud, sl.MEASURE.XYZRGBA)
-					cache.append(_point_cloud.get_data())
+					if point_cloud:
+						cache.append(_point_cloud.get_data())
+
+				if od:
+					_od_bbox = self.object_detection(_l_img, return_image=od_img)
+					if od_img:
+						_od_bbox, _od_img = _od_bbox
+					if od_bbox:
+						cache.append(_od_bbox)
+					if od_img:
+						cache.append(_od_img)
+
+				if ss:
+					_ss_pred = self.semantic_segmentation(_l_img, return_image=ss_img)
+					if ss_img:
+						_ss_pred, _ss_img = _ss_pred
+					if ss_pred:
+						cache.append(_ss_pred)
+					if ss_img:
+						cache.append(_ss_img)
+
+				if d2c:
+					_dist_to_col = self.distance_to_collision(_od_bbox, _point_cloud, image=_l_img, return_image=dist_to_col_img)
+					if dist_to_col_img:
+						_dist_to_col, _dist_to_col_img = _dist_to_col
+					if dist_to_col:
+						cache.append(_dist_to_col)
+					if dist_to_col_img:
+						cache.append(_dist_to_col_img)
+
+				if is_c:
+					_is_close = self.is_close_to_collision(_od_bbox, _dist_to_col, return_min_dist=min_dist)
+					if min_dist:
+						_is_close, _min_dist = _is_close
+					if is_close:
+						cache.append(_is_close)
+					if min_dist:
+						cache.append(_min_dist)
+
+				if is_c_s:
+					_is_close = self.is_close_to_collision_simple(_depth_map, return_min_dist=min_dist_simple)
+					if min_dist_simple:
+						_is_close, _min_dist = _is_close
+					if is_close_simple:
+						cache.append(_is_close)
+					if min_dist_simple:
+						cache.append(_min_dist)
 
 			if cache:
 				yield cache
 			else:
 				raise StopIteration
+
 			# use 'q' to quit the loop
 			if cv2.waitKey(1) & 0xFF == ord('q'):
 				raise StopIteration
 
-	def capture(self, show=False, keep_showing=False):
+	def capture(self, *, show=False, keep_showing=False):
 		"""Fetches left and right images from cameras and places them in the cache.
 		
 		Parameters:
@@ -116,13 +207,13 @@ class ComputerVision:
 
 		return l_img, r_img
 
-	def depth_map(self, return_image=False, show=False, keep_showing=False):
+	def depth_map(self, *, return_image=False, show=False, keep_showing=False):
 		"""Returns the current depth map.
 
 		Parameters:
-			return_image=False
-				Bool to define whether to return the depth map as a 2D Matrix
-				or as an Image
+			return_img=False
+				if True, the function will also return an image of the depth map.
+				else, the function will return the depth map only (without the image).
 
 			show=False
 				Bool to show if the user wants to see the depth map.
@@ -164,15 +255,22 @@ class ComputerVision:
 		point_cloud = next(gen)
 		return point_cloud
 
-	def object_detection(self, img=None, return_image=False, show=False, keep_showing=False):
-		"""Uses a ML model (Yolov3) to detect objects in the picture.
+	def object_detection(self, img=None, *, return_image=False, show=False, keep_showing=False):
+		"""Uses a ML model (Yolov3-Tiny) to detect objects in the picture.
 
 		Parameters:
 			img=None
 				Image for detection.
-				if None, the function will take the cached image or use a new image.
+				if None, the function will use a new image.
+			return_img=False
+				if True, the function will also return the image of the OD model's prediction.
+				else, the function will return the model prediction only (without the image).
 			show=False
 				Bool to show if the user wants to see the object detection image.
+			keep_showing=False
+				Bool to define whether the user wants to continue with the code while
+				keeping the show window. If False, the code execution will stop until
+				the window is closed.
 
 		Returns:
 			pred
@@ -185,21 +283,30 @@ class ComputerVision:
 
 		pred_bbox = self.od_model.predict(img)
 
-		if return_image:
+		if show or return_image:
 			pred_img = self.od_model.show_on_image(img, pred_bbox, show, keep_showing)
-			return pred_img
+
+		if return_image:
+			return pred_bbox, pred_img
 		else:
 			return pred_bbox
 
-	def semantic_segmentation(self, img=None, return_image=False, show=False, keep_showing=False):
+	def semantic_segmentation(self, img=None, *, return_image=False, show=False, keep_showing=False):
 		"""Uses a ML model (ICNet) to detect objects in the picture.
 
 		Parameters:
 			img=None
-				Image for segmentation.
-				if None, the function will take the cached image or use a new image.
+				Image for detection.
+				if None, the function will use a new image.
+			return_img=False
+				if True, the function will also return the image of the SS model's prediction.
+				else, the function will return the model prediction only (without the image).
 			show=False
 				Bool to show if the user wants to see the semantic segmentation image.
+			keep_showing=False
+				Bool to define whether the user wants to continue with the code while
+				keeping the show window. If False, the code execution will stop until
+				the window is closed.
 
 		Returns:
 			pred
@@ -212,13 +319,15 @@ class ComputerVision:
 
 		pred = self.ss_model.predict(img)
 
-		if return_image:
+		if show or return_image:
 			pred_img = self.ss_model.show_on_image(img, pred_bbox, show, keep_showing)
-			return pred_img
+
+		if return_image:
+			return pred, pred_img
 		else:
 			return pred
 
-	def occupancy_grid(self, point_cloud=None, ss_pred=None, return_image=False, show=False, keep_showing=False):
+	def occupancy_grid(self, point_cloud=None, ss_pred=None, *, return_image=False, show=False, keep_showing=False):
 		"""Uses RANSAC and other algorithms to compute the occupancy grid of the current frame.
 
 		Parameters:
@@ -232,114 +341,174 @@ class ComputerVision:
 			occ_grid
 				occupancy grid.
 		"""
+		if point_cloud is None or ss_pred is None:
+			gen = self.loop(point_cloud=True, ss_pred=True)
+			point_cloud, ss_pred = next(gen)
 		#TODO: Check that this function works with ZED camera
 		pass
 	
-	def _get_dist(bbox, point_cloud):
+	def _get_dist(self, bbox, point_cloud):
 		"""Returns the distance of the object in the given point cloud from the given
 		bounding box.
 
 		Helper Function!
 		"""
-		#TODO: Check that this function works with ZED camera
-		x_min, y_min, x_max, y_max = bbox
-
-		x_min, y_min, x_max, y_max = map(int, [x_min, y_min, x_max, y_max])
+		x_min, y_min, x_max, y_max = map(int, bbox)
 
 		cloud = np.array([[point_cloud.get_value(x,y)
 						for x in range(x_min, x_max+1)] 
 						for y in range(y_min, y_max+1)])
 
-		box_dists = np.sqrt(cloud[:,:,0]*cloud[:,:,0]
-						+ cloud[:,:,1]*cloud[:,:,1]
-						+ cloud[:,:,2]*cloud[:,:,2])
+		# Eucledian Distance
+		box_dists = np.sqrt(cloud[:,:,0]*cloud[:,:,0] + cloud[:,:,1]*cloud[:,:,1] + cloud[:,:,2]*cloud[:,:,2])
 
 		return np.min(box_dists)
 
-	def distance_to_collision(self, od_bbox=None, point_cloud=None):
+	def distance_to_collision(self, od_bbox=None, point_cloud=None, *, image=None, return_image=False, show=False, keep_showing=False):
 		"""Calculates the minimum distance to all detected objects.
 
 		Parameters:
 			od_bbox
-				output of the OD model computed on the current frame
-			depth_map
-				depth map of the current frame
+				output of the OD model computed on the current frame.
+			point_cloud
+				point_cloud of the frontal view of the camera.
+			image
+				the current image which is used for showing the prediction on the image.
+			return_img=False
+				if True, the function will also return an image showing the distance to each object.
+				else, the function will return the minimum distances only (without the image).
+			show=False
+				Bool to show if the user wants to see the distance to collision image.
+			keep_showing=False
+				Bool to define whether the user wants to continue with the code while
+				keeping the show window. If False, the code execution will stop until
+				the window is closed.
 
 		Returns:
-			min_distances
+			min_dists
 				the minimum distance for every detected object in the current frame
+			dists_img
+				the image showing the minimum distance to each object
 		"""
-		#TODO: Check that this function works with ZED camera
-		if point_cloud is None:
-			point_cloud = self.point_cloud()
-		if od_bbox is None:
-			od_bbox = self.object_detection()
+		if point_cloud is None or od_bbox is None:
+			gen = self.loop(point_cloud=True, od_bbox=True)
+			point_cloud, od_bbox = next(gen)
 
 		boxes = od_bbox[:, :4]
-		scores = od_bbox[:, 4]
-		classes = od_bbox[:, 5]
-		valid_detections = len(od_bbox)
+		# scores = od_bbox[:, 4]
+		# classes = od_bbox[:, 5]
+		# valid_detections = len(od_bbox)
 
-		min_distances = []
-		for i in range(valid_detections):
-			class_id = classes[i]
-			if class_id in OD_USEFUL_CLASSES:
-				bbox = boxes[i]
-				min_distances.append(self._get_dist(bbox, point_cloud))
+		min_dists = np.array([self._get_dist(bbox, point_cloud) for bbox in boxes])
 
-		return np.array(min_distances)
+		if show or return_image:
+			if image is None:
+				raise NoImageError
+			dists_img = self.od_model._show_min_dists_on_image(image, od_bbox, min_dists, show=show, keep_showing=keep_showing)
 
-	def show_distance_to_collision(self, img, od_bbox, min_dists, show=False, keep_showing=False):
-		"""Shows the minimum distance to all detected objects in an image.
+		if return_image:
+			return min_dists, dists_img
+		else:
+			return min_dists
+
+	def _window(self, get_lims=False):
+		"""Returns a window slice object for the image where objects must be detected.
+
+		Helper Function!
+		"""
+		img_h, img_w = self.od_model.img_shape
+		h_llim = 0
+		w_llim = img_w // 3
+		h_ulim = img_h - (img_h // 4)
+		w_ulim = 1- wllim
+
+		if get_lims:
+			return (h_llim, h_ulim), (w_llim, w_ulim)
+
+		window = slice(h_llim, h_ulim), slice(w_llim, w_ulim)
+		return window
+
+	def is_close_to_collision_simple(self, depth_map=None, *, return_min_dist=False, thres=D2C_THRESHOLD):
+		"""Checks if the camera is close to collsion.
 
 		Parameters:
-			img
-				left image from the camera
-			od_bbox
-				output of the OD model computed on the current frame
-			min_dists
-				output of the distance_to_collision function
-			show
+			depth_map=None
+				depth map of current frame.
+				if None, the function will compute the depth map of a newly captures frame.
+
+			return_min_dist=False
+				if True, the function will also return the minimum distance to the closest object.
+				else, the function will return the boolian value only.
+			thres
+				defines a threshold for detecting whether the object is "close" or "not close".
 
 		Returns:
-			img
-				modified image after adding bounding boxes
+			is_close
+				a boolean to show whether the distance to the closest object is less than
+				the given threshold
+			min_dist
+				the minimum distance to the closest object.
 		"""
-		d2c_img = img.copy()
-
-		for (*xyxy, conf, class_id), dist in reversed(zip(od_bbox, min_dists)):
-				if class_id in USEFUL_CLASSES:
-					label = '{}: {:.2f} cm'.format(CLASS_NAMES[int(class_id)], dist)
-					plot_one_box(xyxy, d2c_img, label=label, color=CLASS_COLORS[int(class_id)], line_thickness=LINE_THICKNESS)
-		
-		if show:
-			cv2.imshow('Distance To Collision', d2c_img)
-			if not keep_showing:
-				cv2.waitKey(0)
-				cv2.destroyWindow('Distance To Collision')
-
-		return d2c_img
-
-	def is_close_to_collision(self, min_dists=None, thres=D2C_THRESHOLD):
-		if min_dists is None:
-			min_dists = self.distance_to_collision()
-
-		min_dist = min_dists[np.isfinite(min_dists)].min()
-		return (min_dist < D2C_THRESHOLD)
-
-	def is_close_to_collision_simple(self, depth_map=None, thres=D2C_THRESHOLD, return_min_dist=False):
 		if depth_map is None:
 			depth_map = self.depth_map()
 
-		img_h, img_w = depth_map.shape
-		third_img_h = img_h // 3
-		quart_img_w = img_w // 4
-
-		window = depth_map[:-quart_img_h, third_img_w:-third_img_w]
-		min_dist = window[np.isfinite(window)].min()
-		
+		min_dist = depth_map[self._window()].min()
 		is_close = min_dist < D2C_THRESHOLD
+
 		if return_min_dist:
-			return min_dist, is_close
+			return is_close, min_dist
 		else:
 			return is_close
+
+	def _boxes_in_window(self, od_bbox):
+		"""Return a boolean vector that shows for each bounding box in od_bbox, if it is in the window or not.
+		
+		Helper Function!
+		"""
+		(h_llim, h_ulim), (w_llim, w_ulim) = self._window(get_lims=True)
+		xmin = od_bbox[:, 0]
+		# ymin = od_bbox[:, 1]
+		xmax = od_bbox[:, 2]
+		# ymax = od_bbox[:, 3]
+
+		in_window = (xmax > w_llim  &  xmin < w_ulim)
+		print(in_window.shape) # (n)
+		return in_window
+
+	def is_close_to_collision(self, od_bbox=None, min_dists=None, *, return_min_dist=False, thres=D2C_THRESHOLD):
+		"""Checks if the camera is close to collsion.
+
+		Parameters:
+			od_bbox
+				output of the OD model computed on the current frame.
+			min_dists
+				the minimum distance to each object in od_bbox.
+
+			return_min_dist=False
+				if True, the function will also return the minimum distance to the closest object.
+				else, the function will return the boolian value only.
+			thres
+				defines a threshold for detecting whether the object is "close" or "not close".
+
+		Returns:
+			is_close
+				a boolean to show whether the distance to the closest object is less than
+				the given threshold
+			min_dist
+				the minimum distance to the closest object.
+		"""
+		if od_bbox is None or min_dists is None:
+			gen = self.loop(od_bbox=True, dist_to_col=True)
+			od_bbox, dist_to_col = next(gen)
+
+		min_dists = min_dists[self._boxes_in_window(od_bbox)]
+
+		min_dist = min_dists[np.isfinite(min_dists)].min()
+		is_close = min_dist < D2C_THRESHOLD
+
+		if return_min_dist:
+			return is_close, min_dist
+		else:
+			return is_close
+
+	

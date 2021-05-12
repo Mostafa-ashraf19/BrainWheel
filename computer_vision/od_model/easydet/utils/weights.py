@@ -103,6 +103,8 @@ def load_darknet_weights(self, weights, cutoff=-1):
     elif file == "yolov3-tiny.conv.15":
         cutoff = 15
 
+    # import os
+    # print(os.getcwd())
     # Read weights file
     with open(weights, "rb") as f:
         # Read Header https://github.com/AlexeyAB/darknet/issues/2914#issuecomment-496675346

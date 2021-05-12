@@ -51,4 +51,4 @@ def test(yolo=True, yolo_tiny=False):
         od_model_tiny.show_on_image(img, pred_tiny, show=True)
 
 if __name__ == "__main__":
-    test(True, True)
+    test(False, True)
