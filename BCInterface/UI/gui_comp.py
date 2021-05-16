@@ -18,16 +18,19 @@ class FlashingBox(QLabel):
     image = QPixmap(images[self.idx])
     self.setPixmap(image.scaled(200,200))
     self.setScaledContents(1)
+    self.counter = 0
 
   def startFlashing(self):
     self.timer.start()
 
   def stopFlashing(self):
+    #print (f'frequ of box {self.freq} is {self.counter}')
     self.timer.stop()
     self.setStyleSheet("background-color: rgb(0, 0, 0)")
 
   def flashing(self):
     if self.flag:
+       self.counter+=1
        self.setStyleSheet("background-color: rgb(0, 0, 0)")
 
     else:
@@ -46,7 +49,7 @@ class movigArrow(QLabel):
         self.seq_idx = 0
         self.flag = True
         self.hide() == True
-        self.location = [[150, 20], [1100, 20], [150, 150], [1100, 150]]# nzbtha m3 l freq
+        self.location = [[170, 20], [170, 150], [1100, 20],[1100, 150]]# nzbtha m3 l freq
         self.sequence = seq
 
         # state initial position of green flag if flashing is first 

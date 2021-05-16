@@ -8,7 +8,6 @@ print(Collect)
 import threading
 from PyQt5.QtCore import QObject, pyqtSignal
 
-freq_map = { 1:12.00, 2:10.00, 3:8.57, 4:7.50, 5:6.66}
 
 class DataAcquisition_thread(QObject):
     """
@@ -33,11 +32,12 @@ class DataAcquisition_thread(QObject):
     collect_signal = pyqtSignal(bool)
     finish_signal = pyqtSignal()
 
-    def __init__(self, sequence,flickering_time):
+    def __init__(self, sequence,flickering_time,freqs):
         super(DataAcquisition_thread, self).__init__()
 
         self.flag = False
         self.sequence = sequence
+        self.freqs = freqs
         
         self.flickering_time =flickering_time
 
@@ -47,23 +47,22 @@ class DataAcquisition_thread(QObject):
     
      
     def collectData(self):
-        self.dataThread = threading.Thread(target=self.collectSeq, args=(self.flickering_time, self.flag, self.sequence), daemon=True)
+        self.dataThread = threading.Thread(target=self.collectSeq, daemon=True)
         self.dataThread.start()
 
-    def collectSeq(self, flickering_time, flag, sequence):
+    def collectSeq(self):
 
-        for i in range (len(sequence)*2):
+        for i in range (len(self.sequence)*2):
             print(f'start collect at: {datetime.datetime.now()}\n')
-            Data = self.collect.record(flickering_time)
+            Data = self.collect.record(self.flickering_time)
 
-            if flag:
-                # Data['Label'] = self.sequence[int(i/2)]
-                Data['Label'] = freq_map[self.sequence[int(i / 2)]]
-            
+            if self.flag:
+                print ('saved')
+                Data['Label'] = self.freqs[self.sequence[int(i / 2)]-1]
                 self.data_save.save(data=Data)
 
-            flag = not flag
-            self.collect_signal.emit(flag)
+            self.flag = not self.flag
+            self.collect_signal.emit(self.flag)
 
 
         self.finish_signal.emit()

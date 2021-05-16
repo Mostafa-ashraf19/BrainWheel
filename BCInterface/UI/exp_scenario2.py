@@ -26,7 +26,7 @@ class expScenario(QWidget):
 
         self.setLayout(QVBoxLayout())
     
-        self.data_acqu = DataAcquisition_thread(self.seq, self.flash_time)
+        self.data_acqu = DataAcquisition_thread(self.seq, self.flash_time,self._FREQ)
         self.data_acqu.collect_signal.connect(self.switch_mode)
         self.data_acqu.finish_signal.connect(self.sessionEnd)
 
@@ -78,9 +78,6 @@ class expScenario(QWidget):
             l1.setStyleSheet("background-color: rgb(0, 0, 0)")
             self.arrow = movigArrow(l1, self.flash_time, self.seq, start_flash=False)
             container.layout().addWidget(l1, 1, 0, 1, 3)
-
-
-
 
 
         # add widget on the main window
