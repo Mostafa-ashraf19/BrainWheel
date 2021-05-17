@@ -26,7 +26,7 @@ class expScenario(QWidget):
 
         self.setLayout(QVBoxLayout())
     
-        self.data_acqu = DataAcquisition_thread(self.seq, self.flash_time)
+        self.data_acqu = DataAcquisition_thread(self.seq, self.flash_time,self._FREQ)
         self.data_acqu.collect_signal.connect(self.switch_mode)
         self.data_acqu.finish_signal.connect(self.sessionEnd)
 
@@ -80,9 +80,6 @@ class expScenario(QWidget):
             container.layout().addWidget(l1, 1, 0, 1, 3)
 
 
-
-
-
         # add widget on the main window
         self.layout().addWidget(container)
 
@@ -91,8 +88,8 @@ class expScenario(QWidget):
     def init_session(self):
         self.window_comp()  # display boxes
         
-        if self.boxes_num == 4:
-            self.arrow.startMoving()
+        #if self.boxes_num == 4:
+        #    self.arrow.startMoving()
         
         self.data_acqu.collectData()  # collect thread
 
@@ -100,9 +97,11 @@ class expScenario(QWidget):
     def switch_mode(self, collect):
         print(collect)
         if collect:
+            self.arrow.movigArrow()
             self.start_box_flashing()
             print(f'start flashing at: {datetime.datetime.now()}')
         else:
+            self.arrow.movigArrow()
             self.stop_box_flashing()
 
 
