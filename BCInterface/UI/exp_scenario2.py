@@ -88,8 +88,8 @@ class expScenario(QWidget):
     def init_session(self):
         self.window_comp()  # display boxes
         
-        if self.boxes_num == 4:
-            self.arrow.startMoving()
+        #if self.boxes_num == 4:
+        #    self.arrow.startMoving()
         
         self.data_acqu.collectData()  # collect thread
 
@@ -97,9 +97,11 @@ class expScenario(QWidget):
     def switch_mode(self, collect):
         print(collect)
         if collect:
+            self.arrow.movigArrow()
             self.start_box_flashing()
             print(f'start flashing at: {datetime.datetime.now()}')
         else:
+            self.arrow.movigArrow()
             self.stop_box_flashing()
 
 

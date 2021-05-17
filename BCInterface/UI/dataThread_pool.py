@@ -57,7 +57,6 @@ class DataAcquisition_thread(QObject):
             Data = self.collect.record(self.flickering_time)
 
             if self.flag:
-                print ('saved')
                 Data['Label'] = self.freqs[self.sequence[int(i / 2)]-1]
                 self.data_save.save(data=Data)
 
