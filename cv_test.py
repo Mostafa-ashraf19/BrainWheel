@@ -1,7 +1,7 @@
 # Unit Tests
 import numpy as np
 import cv2
-from computer_vision import ComputerVision
+from BrainWheel.computer_vision import ComputerVision
 
 CV = ComputerVision()
 
@@ -45,7 +45,7 @@ def general_test():
 
 def ss_and_od_test_on_college_data_test():
 	SS_image_list = ['test{:02d}.jpeg'.format(n) for n in range(22)]
-	SS_image_dir = './test images/'
+	SS_image_dir = './BrainWheel/computer_vision/test images/'
 	for img_name in SS_image_list:
 		img_name = SS_image_dir + img_name
 		img = cv2.imread(img_name)

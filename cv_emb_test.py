@@ -1,8 +1,8 @@
 import time 
 import cv2
 
-from computer_vision import ComputerVision
-from embedded_system import move_wheelchair
+from BrainWheel.computer_vision import ComputerVision
+from BrainWheel.embedded_system import move_wheelchair
 
 def main():
     CV = ComputerVision()

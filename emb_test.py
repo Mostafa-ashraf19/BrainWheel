@@ -1,6 +1,6 @@
 import time
 
-from embedded_system import move_wheelchair
+from BrainWheel.embedded_system import move_wheelchair
 
 def main():
     time.sleep(2)
