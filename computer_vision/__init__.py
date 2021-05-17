@@ -1,1 +1,1 @@
-from computer_vision import ComputerVision
+from .computer_vision import ComputerVision

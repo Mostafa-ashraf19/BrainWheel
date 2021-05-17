@@ -16,8 +16,8 @@ def general_test():
 		print('point cloud shape:', point_cloud.shape)
 		print('depth map shape:  ', depth_map.shape)
 
-		# Object Detection
-		od_bbox = CV.object_detection(l_img, show=True, keep_showing=True)
+		# # Object Detection
+		# od_bbox = CV.object_detection(l_img, show=True, keep_showing=True)
 
 		# # Semantic Segmentation
 		# ss_pred = CV.semantic_segmentation(l_img, show=True, keep_showing=True)
@@ -25,13 +25,13 @@ def general_test():
 		# # Occupancy Grid
 		# occ_grid = CV.occupancy_grid(point_cloud, ss_pred, show=True, keep_showing=True)
 
-		# Distance to Collision
-		min_dists = CV.distance_to_collision(od_bbox, point_cloud, l_img, return_image=False, show=True, keep_showing=True)
+		# # Distance to Collision
+		# min_dists = CV.distance_to_collision(od_bbox, point_cloud, l_img, return_image=False, show=True, keep_showing=True)
 		
-		# Is Close to Collision
-		min_dist, is_close = CV.is_close_to_collision(od_bbox, min_dists, return_min_dist=True)
-		is_close = "CLOSE!!!" if is_close else "not close"
-		print(min_dist, '\t=>', is_close)
+		# # Is Close to Collision
+		# min_dist, is_close = CV.is_close_to_collision(od_bbox, min_dists, return_min_dist=True)
+		# is_close = "CLOSE!!!" if is_close else "not close"
+		# print(min_dist, '\t=>', is_close)
 
 		# Is Close to Collision Simple
 		min_dist, is_close = CV.is_close_to_collision_simple(depth_map, return_min_dist=True)

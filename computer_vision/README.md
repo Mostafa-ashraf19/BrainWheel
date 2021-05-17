@@ -68,6 +68,14 @@ occ_grid = CV.occupancy_grid(point_cloud, ss_pred, show=True)
 
 # Distance to Collision
 min_dists = CV.distance_to_collision(od_bbox, point_cloud)
+
+# Checking if an object is close
+if CV.is_close_to_collision(od_bbox, min_dists):
+  ...
+  pass
+if CV.is_close_to_collision_simple(depth_map):
+  ...
+  pass
 ```
 
 

@@ -11,11 +11,11 @@ import numpy as np
 import cv2
 import pyzed.sl as sl
 
-from errors import CameraNotConnectedError, NoImageError
+from .errors import CameraNotConnectedError, NoImageError
 
-# from od_model import ODModel
-from od_model import ODModelTiny as ODModel
-# from ss_model import SSModel
+# from .od_model import ODModel
+from .od_model import ODModelTiny as ODModel
+# from .ss_model import SSModel
 
 # Constants
 
@@ -24,7 +24,8 @@ ZED_CAM_FPS = 30
 ZED_COORDINATE_UNITS = sl.UNIT.CENTIMETER
 ZED_DEPTH_MODE = sl.DEPTH_MODE.PERFORMANCE
 
-D2C_THRESHOLD = 73
+# D2C_THRESHOLD = 73
+D2C_THRESHOLD = 150
 
 # Main Class
 
@@ -44,13 +45,13 @@ class ComputerVision:
 			raise CameraNotConnectedError()
 
 		# machine learning models
-		self.od_model = ODModel()
+		# self.od_model = ODModel()
 		# self.ss_model = SSModel()
 
 	def __del__(self):
 		self.zed.close()
 
-	def loop(self, *, l_img=True, r_img=False, depth_map=False, depth_map_img=False, point_cloud=False,
+	def loop(self, *, l_img=False, r_img=False, depth_map=False, depth_map_img=False, point_cloud=False,
 					od_bbox=False, od_img=False, ss_pred=False, ss_img=False,
 					dist_to_col=False, dist_to_col_img=False,
 					is_close=False, min_dist=False, is_close_simple=False, min_dist_simple=False):
@@ -113,7 +114,8 @@ class ComputerVision:
 				if depth_map or is_c_s:
 					_depth_map = sl.Mat()
 					self.zed.retrieve_measure(_depth_map, sl.MEASURE.DEPTH)
-					cache.append(_depth_map.get_data())		
+					if depth_map:
+						cache.append(_depth_map.get_data())		
 
 				if depth_map_img:
 					_depth_map_img = sl.Mat()
@@ -451,8 +453,10 @@ class ComputerVision:
 		"""
 		if depth_map is None:
 			depth_map = self.depth_map()
+		depth_map = depth_map.get_data()
 
-		min_dist = depth_map[self._window()].min()
+		# min_dist = depth_map[self._window()].min()
+		min_dist = depth_map[np.isfinite(depth_map)].min()
 		is_close = min_dist < D2C_THRESHOLD
 
 		if return_min_dist:
