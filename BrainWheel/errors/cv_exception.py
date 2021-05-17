@@ -1,7 +1,8 @@
 """ Exceptions module for Computer Vision Class.
 """
+from .base import BrainWheelException
 
-class CVException(Exception):
+class CVException(BrainWheelException):
 	pass
 
 class CameraNotConnectedError(CVException):

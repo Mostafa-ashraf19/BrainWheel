@@ -1,7 +1,7 @@
 import cv2
 from time import time
 
-from od_model import ODModel, ODModelTiny
+from BrainWheel.computer_vision.od_model import ODModel, ODModelTiny
 
 def test(yolo=True, yolo_tiny=False):
     if yolo:

@@ -1,6 +1,6 @@
 import Jetson.GPIO as GPIO
 
-from .emb_exception import InvalidDirectionError
+from ..errors import InvalidDirectionError
 import time
 GPIO.setmode(GPIO.BOARD)
 

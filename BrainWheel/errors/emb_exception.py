@@ -1,4 +1,6 @@
-class EmbException(Exception):
+from .base import BrainWheelException
+
+class EmbException(BrainWheelException):
     pass
 
 class InvalidDirectionError(EmbException):

@@ -11,7 +11,7 @@ import numpy as np
 import cv2
 import pyzed.sl as sl
 
-from .errors import CameraNotConnectedError, NoImageError
+from ..errors import CameraNotConnectedError, NoImageError
 
 # from .od_model import ODModel
 from .od_model import ODModelTiny as ODModel
