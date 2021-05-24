@@ -2,4 +2,4 @@
 
 from .cv_exception import CameraNotConnectedError, NoImageError
 
-from .emb_exception import InvalidDirectionError
+from .emb_exception import InvalidDirectionError, InvalidSerialCharError

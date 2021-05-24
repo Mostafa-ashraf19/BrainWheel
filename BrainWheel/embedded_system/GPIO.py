@@ -26,6 +26,7 @@ def move_wheelchair(direction):
     elif direction == "stop":
         GPIO.output(GPIO_motor_pin_1, False)
         GPIO.output(GPIO_motor_pin_2, False)
-    
+    elif direction == "same":
+        return
     else:
-        raise InvalidDirectionError()
+        raise InvalidDirectionError(direction)

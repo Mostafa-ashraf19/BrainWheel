@@ -4,6 +4,7 @@ import cv2
 from .buffer import _Buffer
 from ..computer_vision import ComputerVision
 from ..embedded_system import move_wheelchair
+from ..embedded_system import Serial
 
 
 def manual_mode(CV_object=None, *, timer=False, verbose=False):
@@ -11,6 +12,8 @@ def manual_mode(CV_object=None, *, timer=False, verbose=False):
         CV_object = ComputerVision()
     if timer:
         t0 = time.time()
+
+    serial = Serial()
 
 
     is_close_buffer = _Buffer()
@@ -23,9 +26,12 @@ def manual_mode(CV_object=None, *, timer=False, verbose=False):
             cv2.imshow('Depth Map', depth_map_img)
             print(is_close_buffer, min_dist)
 
-        # TODO:
-        # Get instruction from BCI
-        instruction = "forward"
+        instruction = serial.get_inst()
+        # instruction = "forward"
+
+        if instruction == "auto":
+            # Goto auto mode
+            return
 
         if is_close_buffer.is_any_true() and instruction == "forward":
             move_wheelchair("stop")
