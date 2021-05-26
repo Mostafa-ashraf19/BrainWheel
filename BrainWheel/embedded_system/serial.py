@@ -13,7 +13,7 @@ import serial
 
 from ..errors import InvalidSerialCharError
 
-class Serial:
+class SerialReciever:
     def __init__(self):
         self.port = serial.Serial(
             port="/dev/ttyTHS1",

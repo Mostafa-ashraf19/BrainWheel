@@ -4,7 +4,7 @@ import cv2
 from .buffer import _Buffer
 from ..computer_vision import ComputerVision
 from ..embedded_system import move_wheelchair
-from ..embedded_system import Serial
+from ..embedded_system import SerialReciever
 
 
 def manual_mode(CV_object=None, *, timer=False, verbose=False):
@@ -13,7 +13,7 @@ def manual_mode(CV_object=None, *, timer=False, verbose=False):
     if timer:
         t0 = time.time()
 
-    serial = Serial()
+    serial = SerialReciever()
 
 
     is_close_buffer = _Buffer()

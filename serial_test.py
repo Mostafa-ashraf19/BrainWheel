@@ -45,11 +45,11 @@
 #     serial_port.close()
 #     pass
 
-from BrainWheel.embedded_system import Serial
+from BrainWheel.embedded_system import SerialReciever
 
 
 def main():
-    serial = Serial()
+    serial = SerialReciever()
     print("Ready to Recieve:")
 
     while True:
