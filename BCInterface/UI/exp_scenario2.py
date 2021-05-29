@@ -8,9 +8,17 @@ from .dataThread_pool import DataAcquisition_thread
 from PyQt5.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QMessageBox
 
 
+# for real time 
+# 1. stop moving of arrow 
+# 2. for every flickering time  data should be sent - create process and with each finihsing call function that take the data
+# 3. stop  stop function of flashing boxes 
+# 4. take no sequence 
+# 5. no sessionEnd 
+
+
 class expScenario(QWidget):
  
-    def __init__(self, boxes_num=4, flash_time=1, sequence=[4, 2, 3, 1, 2], freqs=[12.0, 10.0, 8.57, 7.5]):
+    def __init__(self, boxes_num=4, flash_time=1, sequence=[4, 2, 3, 1, 2], freqs=[12.0, 10.0, 8.57, 7.5], real_time=False):
 
         super(expScenario, self).__init__()
 
@@ -18,6 +26,7 @@ class expScenario(QWidget):
         self._FREQ = freqs
         self.boxes_num = boxes_num
         self.flash_time = flash_time
+        self.real_time = real_time
 
         self.collect = False
         self.boxes = []
@@ -26,9 +35,7 @@ class expScenario(QWidget):
 
         self.setLayout(QVBoxLayout())
     
-        self.data_acqu = DataAcquisition_thread(self.seq, self.flash_time,self._FREQ)
-        self.data_acqu.collect_signal.connect(self.switch_mode)
-        self.data_acqu.finish_signal.connect(self.sessionEnd)
+        self.data_acqu = DataAcquisition_thread(self.seq, self.flash_time,self._FREQ,self.real_time)
 
         self.init_session()
         
@@ -69,9 +76,9 @@ class expScenario(QWidget):
         container.layout().addWidget(self.boxes[0], 0, 0)
         container.layout().addWidget(QLabel(), 0, 1)
         if self.boxes_num == 4:
-            container.layout().addWidget(self.boxes[1], 2, 0)
-            container.layout().addWidget(self.boxes[2], 0, 2)
-            container.layout().addWidget(self.boxes[3], 2, 2)
+            container.layout().addWidget(self.boxes[1], 3, 0)
+            container.layout().addWidget(self.boxes[2], 0, 3)
+            container.layout().addWidget(self.boxes[3], 3, 3)
             # arrow
             l1 = QLabel()
             l1.adjustSize()
@@ -87,10 +94,13 @@ class expScenario(QWidget):
 
     def init_session(self):
         self.window_comp()  # display boxes
-        
-        #if self.boxes_num == 4:
-        #    self.arrow.startMoving()
-        
+
+        if self.real_time:
+            self.start_box_flashing()
+        else:
+            self.data_acqu.collect_signal.connect(self.switch_mode)
+            self.data_acqu.finish_signal.connect(self.sessionEnd)
+
         self.data_acqu.collectData()  # collect thread
 
     
@@ -104,12 +114,4 @@ class expScenario(QWidget):
             self.arrow.movigArrow()
             self.stop_box_flashing()
 
-
-
-
-
-
-    
-
- 
 

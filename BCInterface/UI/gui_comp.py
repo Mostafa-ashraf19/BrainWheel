@@ -10,6 +10,10 @@ from PyQt5.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QMessageB
 images = [os.path.join(os.getcwd() +'\\BCInterface\\assets\\',image) for image in ['up.png', 'right.png', 'left.png', 'back.png']]
 arrow_path = os.path.join(os.getcwd() +'\\BCInterface\\assets\\','arrow.png')
 
+
+fig_loaction = [(0,0),(0,200),(340,0),(340,200)]
+
+
 class FlashingBox2(QLabel):
   def __init__(self, freq, idx):
     super(FlashingBox2, self).__init__()
@@ -57,9 +61,10 @@ class FlashingBox(QLabel):
 
         self.label1 = QLabel(self)
         self.label1.setStyleSheet("background-color:  rgba(0,0,0,0%)")
-        self.label1.setPixmap(QPixmap(images[idx]).scaled(230, 230))
+        self.label1.setPixmap(QPixmap(images[idx]).scaled(120, 120))
         #self.label1.setScaledContents(1)
-        self.label1.move(100, 0)
+        x,y = fig_loaction[idx]
+        self.label1.move(x,y)
 
         #image = QPixmap(images[self.idx])
         #self.setPixmap(image.scaled(200,200))
@@ -98,7 +103,7 @@ class movigArrow(QLabel):
         self.seq_idx = 0
         self.flag = True
         self.hide() == True
-        self.location = [[170, 20], [170, 150], [1100, 20],[1100, 150]]# nzbtha m3 l freq
+        self.location = [[170, 20], [170, 150], [1400, 20],[1400, 150]]# nzbtha m3 l freq
         self.sequence = seq
 
         # state initial position of green flag if flashing is first 
