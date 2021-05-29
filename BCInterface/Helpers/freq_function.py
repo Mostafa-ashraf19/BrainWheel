@@ -17,7 +17,6 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
     return y
 
 
-
 def butter_highpass(cutoff, fs, order=5):
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
@@ -43,8 +42,4 @@ def butter_lowpass_filter(data, cutoff, fs, order=5):
     b, a = butter_lowpass(cutoff, fs, order=order)
     y = filtfilt(b, a, data)
     return y
-	
-	
-	
-	
 
