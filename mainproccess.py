@@ -19,7 +19,6 @@ class Process:
         - Load Pretrained Model & Pca
         - open serial communication with jetson
         """
-        # print ('process is created')
         self.Model = pk.load(open(Model_Name, 'rb'))
         self.pca = pk.load(open(Pca_Name, 'rb'))
         # self.serial_sender = SerialSender()
@@ -30,10 +29,13 @@ class Process:
             :param Feature: the Feature vector of the data
             :return: Model prediction
         """
+
         Feature = pd.DataFrame(self.pca.transform(Feature))
+
         p = np.array(self.Model.decision_function(Feature))  # decision is a voting function
         prob = np.exp(p) / np.sum(np.exp(p), axis=1, keepdims=True)  # softmax after the voting
         print(prob)
+
         return self.Model.predict(Feature)
 
     def _prepare_data(self, Data):
@@ -43,18 +45,12 @@ class Process:
             :param Data: data recorded by the head set in n seconds
             :return: Feature vector
         """
-        # print('main process')
-        # print(Data)
         # applay car DF -> Df
-        Data1 = helper.CAR(Data, train=False)
-        # print('CAr',Data1)
-        Data2 = helper.butter_band_filter(Data1, lowcut=5, highcut=60, FS=128, Order=5)
-        # print('butter')
-        # print(Data2)
-        freq = helper.welch(Data2, train=False)
+        Data = helper.CAR(Data, train=False)
+        Data = helper.butter_band_filter(Data, lowcut=5, highcut=60, FS=128, Order=5)
+        freq = helper.welch(Data, train=False)
 
         Features = helper.featureExtraction_welch_real(freq, 3, ['P7', 'O1', 'O2', 'P8'])
-        # print(Data)
         return Features
 
     def _send_to_jetson(self, prediction):
@@ -68,18 +64,14 @@ class Process:
         # characters to bus
         # self.serial_sender.send_inst(char[prediction])
 
-    # preds = predict(x_train[:5], model)
-    # print(preds)
-
     def make_process(self, Data):
         """
         the interface function with the Gui
             :param Data: data recorded sent from GUi
             :return: prediction to Jetson
         """
-        # print ('data is sent')
+
         freq = {0: 7.5, 1: 8.57, 2: 10.0, 3: 12.0}
-        # print (Data)
         # access data then get feature
         Features = self._prepare_data(Data)
 
@@ -87,7 +79,6 @@ class Process:
         prediction = self._predict(Features)
         # results to serial
         self._send_to_jetson(freq[prediction[0]])
-
 
 # from BCInterface.Preprocessing.DataPrepare import DataPrepare
 # import glob
