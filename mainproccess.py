@@ -11,7 +11,7 @@ Pca_Name = 'Finalized_PCA_model.sav'
 
 class Process:
     '''
-    this class responsible for BCI real time response
+        this class responsible for BCI real time response
     '''
 
     def __init__(self):
@@ -27,8 +27,8 @@ class Process:
     def _predict(self, Feature):
         """
         private function
-        :param Feature: the Feature vector of the data
-        :return: Model prediction
+            :param Feature: the Feature vector of the data
+            :return: Model prediction
         """
         Feature = pd.DataFrame(self.pca.transform(Feature))
         p = np.array(self.Model.decision_function(Feature))  # decision is a voting function
@@ -40,8 +40,8 @@ class Process:
         """
         the function pass Real time Data through \
         signal processing pipeline (CAR -> Filter -> Welch -> Feature Extraction block)
-        :param Data: data recorded by the head set in n seconds
-        :return: Feature vector
+            :param Data: data recorded by the head set in n seconds
+            :return: Feature vector
         """
         # print('main process')
         # print(Data)
@@ -60,7 +60,7 @@ class Process:
     def _send_to_jetson(self, prediction):
         """
         this function sends prediction to jetson due to serial communication port
-        :param prediction: the prediction of the model
+            :param prediction: the prediction of the model
         """
         # map prediction to characters
         print(prediction)
@@ -74,8 +74,8 @@ class Process:
     def make_process(self, Data):
         """
         the interface function with the Gui
-        :param Data: data recorded sent from GUi
-        :return: prediction to Jetson
+            :param Data: data recorded sent from GUi
+            :return: prediction to Jetson
         """
         # print ('data is sent')
         freq = {0: 7.5, 1: 8.57, 2: 10.0, 3: 12.0}
