@@ -104,16 +104,10 @@ class expScenario(QWidget):
 
     def flashing(self):
       if self.flag:
-        #print(time.perf_counter()-self.start)
         self.start_box_flashing()
-        #self.data_acqu = DataAcquisition_thread(self.flash_time, self._FREQ[self.freq_index])
-        #self.data_acqu.data_thread.start()
-
       else:
         self.stop_box_flashing()
         self.freq_index = (self.freq_index+1) % 4
-        #if self.data_acqu.data_thread.is_alive():
-        #    print('there is a problem')
 
       self.flag = not self.flag
 

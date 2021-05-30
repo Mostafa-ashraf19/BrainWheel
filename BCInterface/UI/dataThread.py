@@ -1,35 +1,73 @@
-import threading 
-from BCI import BCI
-#import multiprocessing
+import time
+import datetime
+from BCInterface.Preprocessing import Filesmanager
+from BCInterface.Headset import Collect
 
-class DataAcquisition_thread():
+print(Collect)
 
-    def __init__(self, no_of_seconds, current_freq):
-        #self.bci_demo = BCI()
-        self.current_freq = current_freq
-        self.collect_time = no_of_seconds
-        self.data_thread = threading.Thread(target=self.collectData)
-        #self.data_thread = multiprocessing.Process(target=self.collectData)
+import threading
+from PyQt5.QtCore import QObject, pyqtSignal
+
+
+class DataAcquisition_thread(QObject):
+    """
+
+        class attributes:
+            - sequence: is a list has flickering frquency sequence
+            - flickering_time: number of seconds of flickering
+
+        class method
+            - collectData: ThreadPoolExecutor is created for data colleciton
+
+            - collectSeq: it is the task of the thread, loops over sequence of frequency,
+            sequence*2 cause each flickering period is followed  by no stimulus period
+            saving data collected at flickering time and trash  data at no stimulus period
+
+        collect_signal: signal emitted every "flickering" period to start or stop boxes flickering
+        finish_signal: emitted after finshing the loop to indicate end of session
+
+
+    """
+
+    collect_signal = pyqtSignal(bool)
+    finish_signal = pyqtSignal()
+
+    def __init__(self, sequence, flickering_time, freqs):
+        super(DataAcquisition_thread, self).__init__()
+
+        self.flag = False
+        self.sequence = sequence
+        self.freqs = freqs
+
+        self.flickering_time = flickering_time
+
+        self.collect = Collect(False)
+
+        self.data_save = Filesmanager()
 
     def collectData(self):
-        start  = time.perf_counter()
-        bci_demo = BCI()
-        for i in range(self.collect_time*128):
-            logging.warning('abda2 a5od sample'+str(datetime.datetime.now()))
-            self.bci_demo.record_data()
-            logging.warning('end sample'+str(datetime.datetime.now()))
-            #logging.warning('This will get logged to a file')
-        #logging.warning('end'+str(datetime.datetime.now()))
-            
-            #pass
+        self.dataThread = threading.Thread(target=self.collectSeq, daemon=True)
+        self.dataThread.start()
 
-        self.save_file(self.current_freq)
+    def collectSeq(self):
 
-        end  = time.perf_counter()
-        print (f'time {end - start}')
+        for i in range(len(self.sequence) * 2):
+            print(f'start collect at: {datetime.datetime.now()}\n')
+            Data = self.collect.record(self.flickering_time)
 
-    def save_file(self, label):
-       #pass
-       #print(f'label is {label}')
-       #self.bci_demo.save_data("3bas",label)
-       self.bci_demo.save_data("3bas"+str(datetime.datetime.now()).split()[0],label) # self.bci_demo.data,
+            if self.flag:
+                Data['Label'] = self.freqs[self.sequence[int(i / 2)] - 1]
+                self.data_save.save(data=Data)
+
+            self.flag = not self.flag
+            self.collect_signal.emit(self.flag)
+
+        self.finish_signal.emit()
+
+
+
+
+
+
+
+
