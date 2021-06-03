@@ -53,8 +53,12 @@ def ss_and_od_test_on_college_data_test():
 		CV.object_detection(img, show=True, keep_showing=False)
 
 def occ_grid_test():
-	for occ_grid_img in CV.loop(occ_grid_img=True):
+	for occ_grid, occ_grid_img in CV.loop(occ_grid=True, occ_grid_img=True):
+		print(type(occ_grid))
+		print(occ_grid.shape)
+		# print(point_cloud)
 		cv2.imshow("Occupancy Grid",occ_grid_img)
+		break
 
 
 if __name__ == '__main__':

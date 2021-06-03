@@ -183,7 +183,9 @@ class ComputerVision:
 					if min_dist_simple:
 						cache.append(_min_dist)
 
-			if cache:
+			if len(cache) == 1:
+				yield cache[0]
+			elif cache:
 				yield cache
 			else:
 				raise StopIteration
@@ -357,7 +359,7 @@ class ComputerVision:
 			gen = self.loop(point_cloud=True, ss_pred=True)
 			point_cloud, ss_pred = next(gen)
 		
-		x, y, z = ... # get coordinates from point cloud
+		x, y, z = point_cloud[:,:,0], point_cloud[:,:,1], point_cloud[:,:,2]
 
 		road_mask = np.zeros(ss_pred.shape)
 		road_mask[ss_pred == 0] = 1 # Check that road class id == 0

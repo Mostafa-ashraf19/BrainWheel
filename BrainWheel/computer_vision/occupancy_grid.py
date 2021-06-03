@@ -1,5 +1,7 @@
 import numpy as np
 
+OCC_GRID_SHAPE = (301, 401)
+
 def ransac_plane_fit(xyz_data):
     """
     Computes plane coefficients a,b,c,d of the plane in the form ax+by+cz+d = 0
@@ -88,40 +90,26 @@ def _dist_to_plane(plane, x,y,z):
 
 #TODO: fix this function
 def get_free_space(ground_mask, point_cloud):
-    sz = depth_map.shape
-    f = self.l_proj_mat[0, 0]
-    c_u = self.l_proj_mat[0, 2]
+    x, y, z = point_cloud[:,:,0], point_cloud[:,:,1], point_cloud[:,:,2]
+    print('here', x.shpae, ground_mask.shape)
+    occ_grid = np.where(
+        #cond1
+        ground_mask != 1 & np.isfinite(x) & np.isfinite(z)
+        ,
+        #case1 value
+        1
+        ,
+        #else
+        np.where(
+            #cond2
+            ground_mask != 1 & np.isfinite(x) & np.isfinite(z)
+            ,
+            #case2 value
+            0
+            ,
+            #else value
+            0.5
+        )
+    )
 
-    # Generate a grid of coordinates corresponding to the shape of the depth
-    # map
-    u, v = np.meshgrid(np.arange(1, sz[1] + 1, 1),
-                        np.arange(1, sz[0] + 1, 1))
-
-    # Compute x and y coordinates
-    xx = ((u - c_u) * depth_map) / f
-
-    xx = xx * 10 + 200
-    xx = np.maximum(0, np.minimum(xx, 399))
-
-    depth_map = depth_map * 10
-    depth_map[depth_map > 300] = np.nan
-
-    occ_grid = np.full([301, 401], 0.5)
-
-    for x, z, seg in zip(xx.flatten('C'), depth_map.flatten('C'),
-                            ground_mask.flatten('C')):
-        if not(seg == 1):
-            if not np.isnan(x) and not np.isnan(z):
-                x = int(x)
-                z = int(z)
-                occ_grid[z, x] = 1
-
-    for x, z, seg in zip(xx.flatten('C'), depth_map.flatten('C'),
-                            ground_mask.flatten('C')):
-        if seg == 1:
-            if not np.isnan(x) and not np.isnan(z):
-                x = int(x)
-                z = int(z)
-                if not occ_grid[z, x] == 1:
-                    occ_grid[z, x] = 0
     return occ_grid
