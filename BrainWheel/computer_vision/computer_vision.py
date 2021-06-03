@@ -19,8 +19,8 @@ from .occupancy_grid import ransac_plane_fit, abs_dist_to_plane, get_free_space
 
 # Constants
 
-ZED_IMG_RESOLUTION = sl.RESOLUTION.HD720
-ZED_CAM_FPS = 30
+ZED_IMG_RESOLUTION = sl.RESOLUTION.VGA
+ZED_CAM_FPS = 15
 ZED_COORDINATE_UNITS = sl.UNIT.CENTIMETER
 ZED_DEPTH_MODE = sl.DEPTH_MODE.PERFORMANCE
 
