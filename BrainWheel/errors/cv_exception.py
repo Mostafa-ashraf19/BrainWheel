@@ -6,8 +6,10 @@ class CVException(BrainWheelException):
 	pass
 
 class CameraNotConnectedError(CVException):
+	def __init__(self, err):
+		self.err = str(err)
 	def __str__(self):
-		return 'ZED camera is not connected.'
+		return f'ZED camera is not connected. "{self.err}"'
 
 class NoImageError(CVException):
 	def __str__(self):

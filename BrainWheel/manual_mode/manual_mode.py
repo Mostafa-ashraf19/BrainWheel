@@ -27,9 +27,10 @@ def manual_mode(CV_object=None, *, timer=False, verbose=False):
             print(is_close_buffer, min_dist)
 
         instruction = serial.get_inst()
-        # instruction = "forward"
+        #instruction = "forward"
 
         if instruction == "auto":
+            move_wheelchair("stop")
             # Goto auto mode
             return
 

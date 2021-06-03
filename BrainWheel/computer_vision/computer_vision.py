@@ -12,9 +12,10 @@ import cv2
 import pyzed.sl as sl
 
 from ..errors import CameraNotConnectedError, NoImageError
+from .occupancy_grid import ransac_plane_fit, abs_dist_to_plane, get_free_space
 
 # from .od_model import ODModel
-from .od_model import ODModelTiny as ODModel
+# from .od_model import ODModelTiny as ODModel
 # from .ss_model import SSModel
 
 # Constants
@@ -24,8 +25,8 @@ ZED_CAM_FPS = 30
 ZED_COORDINATE_UNITS = sl.UNIT.CENTIMETER
 ZED_DEPTH_MODE = sl.DEPTH_MODE.PERFORMANCE
 
-# D2C_THRESHOLD = 73
-D2C_THRESHOLD = 150
+D2C_THRESHOLD = 73
+#D2C_THRESHOLD = 150
 
 # Main Class
 
@@ -42,7 +43,7 @@ class ComputerVision:
 
 		err = self.zed.open(init_params)
 		if err != sl.ERROR_CODE.SUCCESS:
-			raise CameraNotConnectedError()
+			raise CameraNotConnectedError(err)
 
 		# machine learning models
 		# self.od_model = ODModel()
@@ -346,8 +347,36 @@ class ComputerVision:
 		if point_cloud is None or ss_pred is None:
 			gen = self.loop(point_cloud=True, ss_pred=True)
 			point_cloud, ss_pred = next(gen)
-		#TODO: Check that this function works with ZED camera
-		pass
+		
+		x, y, z = ... # get coordinates from point cloud
+
+		road_mask = np.zeros(ss_pred.shape)
+		road_mask[ss_pred == 0] = 1 # Check that road class id == 0
+		# road_mask[ss_pred == 1] = 1 # Check that sidewalk class id == 1
+
+		x, y, z = x[road_mask == 1], y[road_mask == 1], z[road_mask == 1]
+		xyz_ground = np.stack((x,y,z))
+
+		p_final = ransac_plane_fit(xyz_ground)
+		dist = abs_dist_to_plane(p_final, x, y, z)
+
+		ground_mask = np.zeros(dist.shape)
+		ground_mask[dist < 0.1] = 1
+
+		occ_grid = get_free_space(ground_mask, point_cloud)
+		occ_grid_img = np.flip(occ_grid, axis=1)
+
+		if show:
+			cv2.imshow('Occupancy Grid', occ_grid_img)
+			if not keep_showing:
+				cv2.waitKey(0)
+				cv2.destroyWindow('Occupancy Grid')
+
+		if return_image:
+			return occ_grid, occ_grid_img
+		else:
+			return occ_grid
+
 	
 	def _get_dist(self, bbox, point_cloud):
 		"""Returns the distance of the object in the given point cloud from the given

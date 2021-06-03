@@ -11,6 +11,14 @@ GPIO.setup(GPIO_motor_pin_1, GPIO.OUT)
 GPIO.setup(GPIO_motor_pin_2, GPIO.OUT)
 
 def move_wheelchair(direction):
+    if direction == 'left' or direction == 'right':
+        send_inst(direction)
+        time.sleep(1)
+        send_inst('stop')
+    else:
+        send_inst(direction)
+
+def send_inst(direction):
     if direction == "forward":
         GPIO.output(GPIO_motor_pin_1, True)
         GPIO.output(GPIO_motor_pin_2, True)
