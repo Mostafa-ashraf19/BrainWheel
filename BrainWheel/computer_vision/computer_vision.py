@@ -15,7 +15,7 @@ from ..errors import CameraNotConnectedError, NoImageError
 from .occupancy_grid import ransac_plane_fit, abs_dist_to_plane, get_free_space
 
 # from .od_model import ODModelTiny as ODModel
-# from .ss_model import SSModel
+# from .ss_model import SSModelTiny as SSModel
 
 # Constants
 
