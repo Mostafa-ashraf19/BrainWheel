@@ -14,7 +14,6 @@ import pyzed.sl as sl
 from ..errors import CameraNotConnectedError, NoImageError
 from .occupancy_grid import ransac_plane_fit, abs_dist_to_plane, get_free_space
 
-# from .od_model import ODModel
 # from .od_model import ODModelTiny as ODModel
 # from .ss_model import SSModel
 
@@ -26,7 +25,6 @@ ZED_COORDINATE_UNITS = sl.UNIT.CENTIMETER
 ZED_DEPTH_MODE = sl.DEPTH_MODE.PERFORMANCE
 
 D2C_THRESHOLD = 73
-#D2C_THRESHOLD = 150
 
 # Main Class
 
@@ -54,7 +52,7 @@ class ComputerVision:
 
 	def loop(self, *, l_img=False, r_img=False, depth_map=False, depth_map_img=False, point_cloud=False,
 					od_bbox=False, od_img=False, ss_pred=False, ss_img=False,
-					dist_to_col=False, dist_to_col_img=False,
+					occ_grid = False, occ_grid_img = False, dist_to_col=False, dist_to_col_img=False,
 					is_close=False, min_dist=False, is_close_simple=False, min_dist_simple=False):
 		"""Main generator function for the ComputerVision class.
 		
@@ -77,6 +75,7 @@ class ComputerVision:
 			- od_img
 			- ss_pred
 			- ss_img
+			- occ_grid
 			- dist_to_col (aka: min_dists)
 			- dist_to_col_img
 			- is_close
@@ -93,8 +92,9 @@ class ComputerVision:
 		is_c = is_close or min_dist
 		is_c_s = is_close_simple or min_dist_simple
 		d2c = dist_to_col or dist_to_col_img or is_c
+		og = occ_grid or occ_grid_img
 		od = od_bbox or od_img or d2c
-		ss = ss_pred or ss_img
+		ss = ss_pred or ss_img or og
 		
 		runtime_parameters = sl.RuntimeParameters()
 
@@ -123,7 +123,7 @@ class ComputerVision:
 					self.zed.retrieve_image(_depth_map_img, sl.VIEW.DEPTH)
 					cache.append(_depth_map_img.get_data())
 
-				if point_cloud or d2c:
+				if point_cloud or d2c or og:
 					_point_cloud = sl.Mat()
 					self.zed.retrieve_measure(_point_cloud, sl.MEASURE.XYZRGBA)
 					if point_cloud:
@@ -146,6 +146,15 @@ class ComputerVision:
 						cache.append(_ss_pred)
 					if ss_img:
 						cache.append(_ss_img)
+
+				if og:
+					_occ_grid = self.occupancy_grid(_point_cloud, _ss_pred, return_image=occ_grid_img)
+					if occ_grid_img:
+						_occ_grid, _occ_grid_img = _occ_grid
+					if occ_grid:
+						cache.append(_occ_grid)
+					if occ_grid_img:
+						cache.append(_occ_grid_img)
 
 				if d2c:
 					_dist_to_col = self.distance_to_collision(_od_bbox, _point_cloud, image=_l_img, return_image=dist_to_col_img)
