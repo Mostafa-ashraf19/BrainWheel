@@ -3,6 +3,7 @@ from time import time
 
 from BrainWheel.computer_vision.ss_model import SSModel, SSModelTiny
 
+
 def test(big_model=True, tiny_model=False):
 	if big_model:
 		ss_model = SSModel()
