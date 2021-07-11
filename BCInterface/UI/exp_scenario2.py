@@ -8,16 +8,26 @@ from .dataThread_pool import DataAcquisition_thread
 from PyQt5.QtWidgets import QWidget, QLabel, QGridLayout, QVBoxLayout, QMessageBox
 
 
+
+#TODO
+# for ""real_time"" (seq is not required flag should be sent to dataThread, 1.flag should be removed )
+# behaviour of switch_mode should be changed
+# sessionEnd should be removed or not called actually
+
+
+
 class expScenario(QWidget):
- 
-    def __init__(self, boxes_num=4, flash_time=1, sequence=[4, 2, 3, 1, 2], freqs=[12.0, 10.0, 8.57, 7.5]):
+    #real_time
+    def __init__(self, boxes_num=4, flash_time=1, moving_time=4, sequence=[4, 2, 3, 1, 2], freqs=[12.0, 10.0, 8.57, 7.5], real_time=False):
 
         super(expScenario, self).__init__()
-
         self.seq = sequence
         self._FREQ = freqs
         self.boxes_num = boxes_num
         self.flash_time = flash_time
+        self.moving_time = moving_time
+        #real_time
+        self.real_time = real_time
 
         self.collect = False
         self.boxes = []
@@ -25,10 +35,9 @@ class expScenario(QWidget):
         self.sequence_len = len(sequence)
 
         self.setLayout(QVBoxLayout())
-    
-        self.data_acqu = DataAcquisition_thread(self.seq, self.flash_time,self._FREQ)
-        self.data_acqu.collect_signal.connect(self.switch_mode)
-        self.data_acqu.finish_signal.connect(self.sessionEnd)
+
+        self.data_acqu = DataAcquisition_thread(sequence=self.seq, flickering_time=self.flash_time,
+                                                moving_time=self.moving_time, freqs=self._FREQ, real_time=self.real_time)
 
         self.init_session()
         
@@ -42,8 +51,10 @@ class expScenario(QWidget):
             box.stopFlashing()    
 
     def sessionEnd(self):
-        #self.flashing_timer.stop()
+
+        print('session ended')
         self.stop_box_flashing()
+        print ('box stopped')
         self.arrow.stopMoving()
        
         msgBox = QMessageBox()
@@ -68,16 +79,23 @@ class expScenario(QWidget):
         container.setLayout(QGridLayout())
         container.layout().addWidget(self.boxes[0], 0, 0)
         container.layout().addWidget(QLabel(), 0, 1)
+
         if self.boxes_num == 4:
-            container.layout().addWidget(self.boxes[1], 2, 0)
-            container.layout().addWidget(self.boxes[2], 0, 2)
-            container.layout().addWidget(self.boxes[3], 2, 2)
+            container.layout().addWidget(self.boxes[1], 0, 3)
+            container.layout().addWidget(self.boxes[2], 3, 0)
+            container.layout().addWidget(self.boxes[3], 3, 3)
+
+        # real_time
+        # still working on 4 boxes as a max
+        if not self.real_time or self.boxes_num >1:
             # arrow
             l1 = QLabel()
             l1.adjustSize()
+
             l1.setStyleSheet("background-color: rgb(0, 0, 0)")
             self.arrow = movigArrow(l1, self.flash_time, self.seq, start_flash=False)
-            container.layout().addWidget(l1, 1, 0, 1, 3)
+            container.layout().addWidget(l1, 1, 0, 2, 4)
+
 
 
         # add widget on the main window
@@ -87,13 +105,16 @@ class expScenario(QWidget):
 
     def init_session(self):
         self.window_comp()  # display boxes
-        
-        #if self.boxes_num == 4:
-        #    self.arrow.startMoving()
-        
+
+        if self.real_time:
+            self.start_box_flashing()
+        else:
+            self.data_acqu.collect_signal.connect(self.switch_mode)
+            self.data_acqu.finish_signal.connect(self.sessionEnd)
+
         self.data_acqu.collectData()  # collect thread
 
-    
+    # real_time for this mode this not be called  -> configured in the __init__ function
     def switch_mode(self, collect):
         print(collect)
         if collect:
